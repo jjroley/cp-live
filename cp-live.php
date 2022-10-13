@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Church Plugins - Live
  * Plugin URL: https://churchplugins.com
- * Description: ChurchPlugins integration plugin for ChMS
+ * Description: Automatically detect and show live video feeds.
  * Version: 1.0.0
  * Author: Church Plugins
  * Author URI: https://churchplugins.com

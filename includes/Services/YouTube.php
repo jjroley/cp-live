@@ -183,30 +183,18 @@ class YouTube extends Service{
 	public function settings( $cmb ) {
 		$cmb->add_field( [
 			'name'        => __( 'YouTube Channel ID', 'cp-live' ),
-			'id'          => 'youtube_channel_id',
+			'id'          => 'channel_id',
 			'type'        => 'text',
 			'description' => __( 'The ID of the channel to check.', 'cp-live' ),
 		], 5 );		
 
 		$cmb->add_field( [
 			'name'        => __( 'YouTube API Key', 'cp-live' ),
-			'id'          => 'youtube_api_key',
+			'id'          => 'api_key',
 			'type'        => 'text',
 			'description' => __( 'Used to connect to the YouTube API.', 'cp-live' ),
 		], 5 );
-
-		$cmb->add_field( [
-			'name'        => __( 'Live Video Duration', 'cp-live' ),
-			'id'          => 'live_video_duration',
-			'type'        => 'text',
-			'default'     => '6',
-			'description' => __( 'How many hours to show this channel as live once the video has started.', 'cp-live' ),
-			'attributes'  => array(
-				'type'    => 'number',
-				'pattern' => '\d*',
-			),
-		], 5 );
-
+		
 		$cmb->add_field( [
 			'name'    => __( 'Channel Status', 'cp-live' ),
 			'id'      => 'channel_live',

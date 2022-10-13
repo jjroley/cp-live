@@ -29,7 +29,7 @@ private static $installed = array (
     'aliases' => 
     array (
     ),
-    'reference' => 'ddf40f7d179754ed288fe7fb20b55c7057dc1561',
+    'reference' => '4ae717b4c71b1a3f440222e192fdfd273299bdb1',
     'name' => 'churchplugins/cp-live',
   ),
   'versions' => 
@@ -41,7 +41,7 @@ private static $installed = array (
       'aliases' => 
       array (
       ),
-      'reference' => 'ddf40f7d179754ed288fe7fb20b55c7057dc1561',
+      'reference' => '4ae717b4c71b1a3f440222e192fdfd273299bdb1',
     ),
     'composer/installers' => 
     array (

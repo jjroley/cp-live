@@ -2,6 +2,8 @@
 
 namespace CP_Live\Integrations;
 
+use CP_Live\Admin\Settings;
+
 class CP_Locations {
 
 	/**
@@ -91,11 +93,22 @@ class CP_Locations {
 		if ( ! function_exists( 'cp_locations' ) ) {
 			return;
 		}
+
+		$cmb = new_cmb2_box( [
+			'id'           => "location_live_schedule_meta",
+			'title'        => __( 'Live Schedules', 'cp-live' ),
+			'object_types' => [ cp_locations()->setup->post_types->locations->post_type ],
+			'context'      => 'normal',
+			'priority'     => 'high',
+			'show_names'   => true,
+		] );
+		
+		Settings::schedule_fields( $cmb );
 		
 		foreach( cp_live()->services->get_active_services() as $service => $details ) {
 			$cmb = new_cmb2_box( [
 				'id'           => "location_live_{$service}_meta",
-				'title'        => sprintf( __( '% Live', 'cp-locations' ), $details['label'] ),
+				'title'        => sprintf( __( '%s Live', 'cp-live' ), $details['label'] ),
 				'object_types' => [ cp_locations()->setup->post_types->locations->post_type ],
 				'context'      => 'normal',
 				'priority'     => 'high',

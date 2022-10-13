@@ -196,46 +196,7 @@ class Settings {
 			'type' => 'title',
 		) );
 		
-		$group_field_id = $main_options->add_field( array(
-			'id'          => 'schedule_group',
-			'type'        => 'group',
-			'repeatable'  => true, // use false if you want non-repeatable group
-			'options'     => array(
-				'group_title'   => __( 'Schedule {#}', 'cp-live' ),
-				'add_button'    => __( 'Add Another Schedule', 'cp-live' ),
-				'remove_button' => __( 'Remove Schedule', 'cp-live' ),
-				'sortable'      => false,
-			),
-		) );
-
-		$main_options->add_group_field( $group_field_id, array(
-			'name'    => 'Day',
-			'id'      => 'day',
-			'type'    => 'select',
-			'options' => [
-				'sunday'    => __( 'Sunday', 'cp-live' ),
-				'monday'    => __( 'Monday', 'cp-live' ),
-				'tuesday'   => __( 'Tuesday', 'cp-live' ),
-				'wednesday' => __( 'Wednesday', 'cp-live' ),
-				'thursday'  => __( 'Thursday', 'cp-live' ),
-				'friday'    => __( 'Friday', 'cp-live' ),
-				'saturday'  => __( 'Saturday', 'cp-live' ),
-			],
-		) );
-
-		$main_options->add_group_field( $group_field_id, array(
-			'name'        => 'Time',
-			'id'          => 'time',
-			'type'        => 'text_time',
-			'attributes'  => array(
-				'data-timepicker' => json_encode( array(
-//					'timeOnlyTitle' => __( 'Choose your Time', 'cp-live' ),
-//					'timeFormat'    => 'HH:mm',
-					'stepMinute'    => 1, // 1 minute increments instead of the default 5
-				) ),
-			),
-			'time_format' => 'h:i a',
-		) );
+		self::schedule_fields( $main_options );
 
 		foreach( cp_live()->services->get_active_services() as $service => $data ) {
 			$box = new_cmb2_box( array(
@@ -276,6 +237,51 @@ class Settings {
 			'type' => 'text',
 		) );
 	}
+	
+	public static function schedule_fields( $cmb2 ) {
+
+		$group_field_id = $cmb2->add_field( array(
+			'id'         => 'schedule_group',
+			'type'       => 'group',
+			'repeatable' => true, // use false if you want non-repeatable group
+			'desc'       => __( 'Add schedules to check for a live stream', 'cp-live' ),
+			'options'    => array(
+				'group_title'   => __( 'Schedule {#}', 'cp-live' ),
+				'add_button'    => __( 'Add Another Schedule', 'cp-live' ),
+				'remove_button' => __( 'Remove Schedule', 'cp-live' ),
+				'sortable'      => false,
+			),
+		) );
+
+		$cmb2->add_group_field( $group_field_id, array(
+			'name'    => 'Day',
+			'id'      => 'day',
+			'type'    => 'select',
+			'options' => [
+				'sunday'    => __( 'Sunday', 'cp-live' ),
+				'monday'    => __( 'Monday', 'cp-live' ),
+				'tuesday'   => __( 'Tuesday', 'cp-live' ),
+				'wednesday' => __( 'Wednesday', 'cp-live' ),
+				'thursday'  => __( 'Thursday', 'cp-live' ),
+				'friday'    => __( 'Friday', 'cp-live' ),
+				'saturday'  => __( 'Saturday', 'cp-live' ),
+			],
+		) );
+
+		$cmb2->add_group_field( $group_field_id, array(
+			'name'        => 'Time',
+			'id'          => 'time',
+			'type'        => 'text_time',
+			'repeatable'  => true,
+			'attributes'  => array(
+				'data-timepicker' => json_encode( array(
+					'stepMinute' => 1, // 1 minute increments instead of the default 5
+				) ),
+			),
+			'time_format' => 'h:i a',
+		) );
+
+	} 
 
 	protected function item_options() {
 		/**
@@ -421,8 +427,8 @@ class Settings {
 		) );
 
 		$advanced_options->add_field( array(
-			'name'       => __( 'Request Interval', 'cp-live' ),
-			'desc'       => __( 'How many minutes between each live video check. Some services limit the number of requests, so adjust this number depending on the number of requests your service supports.', 'cp-live' ),
+			'name'       => __( 'Request Interval (min)', 'cp-live' ),
+			'desc'       => __( 'The number of minutes between each live video check. Some services limit the number of requests, so adjust this number depending on the number of requests your service supports.', 'cp-live' ),
 			'id'         => 'cron_interval',
 			'type'       => 'text',
 			'attributes' => array(
@@ -433,7 +439,7 @@ class Settings {
 		) );
 
 		$advanced_options->add_field( array(
-			'name'       => __( 'Buffer Before', 'cp-live' ),
+			'name'       => __( 'Buffer Before (min)', 'cp-live' ),
 			'desc'       => __( 'The number of minutes before the designated time to start checking for a live stream.', 'cp-live' ),
 			'id'         => 'buffer_before',
 			'type'       => 'text',
@@ -445,7 +451,7 @@ class Settings {
 		) );
 
 		$advanced_options->add_field( array(
-			'name'       => __( 'Buffer After', 'cp-live' ),
+			'name'       => __( 'Buffer After (min)', 'cp-live' ),
 			'desc'       => __( 'The number of minutes after the designated time to stop checking for a live stream if one has not been found.', 'cp-live' ),
 			'id'         => 'buffer_after',
 			'type'       => 'text',
