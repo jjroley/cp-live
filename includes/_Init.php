@@ -20,6 +20,11 @@ class _Init {
 	 */
 	public $setup;
 
+	/**
+	 * @var Services\_Init
+	 */
+	public $services;
+
 	public $enqueue;
 
 	/**
@@ -93,9 +98,13 @@ class _Init {
 		require_once( 'Templates.php' );
 		Admin\_Init::get_instance();
 		$this->setup = Setup\_Init::get_instance();
+		$this->services = Services\_Init::get_instance();
 	}
 	
-	protected function actions() {}
+	protected function actions() {
+		add_action( 'plugins_loaded', [ $this, 'load_integrations' ] );
+		add_action( 'plugins_loaded', [ $this, 'load_services' ] );
+	}
 	
 	/**
 	 * Required Plugins notice
@@ -108,6 +117,24 @@ class _Init {
 
 	/** Helper Methods **************************************/
 
+	public function get_live_video( $status = 'any' ) {
+		$videos = Admin\Settings::get( 'live_videos', [] );
+		
+		
+	}
+	
+	public function load_integrations() {
+		if ( function_exists( 'cp_locations' ) ) {
+			Integrations\CP_Locations::get_instance();
+		}
+		
+		do_action( 'cp_live_load_integrations' );
+	}
+	
+	public function load_services() {
+		
+	}
+	
 	public function get_default_thumb() {
 		return CP_LIVE_PLUGIN_URL . '/app/public/logo512.png';
 	}

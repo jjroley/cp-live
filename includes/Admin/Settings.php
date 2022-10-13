@@ -38,7 +38,7 @@ class Settings {
 	 *
 	 * @author Tanner Moushey
 	 */
-	public static function get( $key, $default = '', $group = 'cpl_main_options' ) {
+	public static function get( $key, $default = '', $group = 'cp_live_main_options' ) {
 		$options = get_option( $group, [] );
 
 		if ( isset( $options[ $key ] ) ) {
@@ -47,12 +47,28 @@ class Settings {
 			$value = $default;
 		}
 
-		return apply_filters( 'cpl_settings_get', $value, $key, $group );
+		return apply_filters( 'cp_live_settings_get', $value, $key, $group );
 	}
 
 	/**
-	 * Get advanced options
+	 * Get service options
 	 *
+	 * @param $key
+	 * @param $service
+	 * @param $default
+	 *
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public static function get_service( $key, $service, $default = '' ) {
+		return self::get( $key, $default, "cp_live_{$service}_options" );
+	}
+
+	/**
+	 * Get Advanced option
+	 * 
 	 * @param $key
 	 * @param $default
 	 *
@@ -62,19 +78,58 @@ class Settings {
 	 * @author Tanner Moushey
 	 */
 	public static function get_advanced( $key, $default = '' ) {
-		return self::get( $key, $default, 'cpl_advanced_options' );
+		return self::get( $key, $default, 'cp_live_advanced_options' );
 	}
 
-	public static function get_item( $key, $default = '' ) {
-		return self::get( $key, $default, 'cpl_item_options' );
+	/**
+	 * Update a value in the options table
+	 *
+	 * @param $key
+	 * @param $value
+	 * @param $group
+	 *
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public static function update( $key, $value, $group = 'cp_live_main_options' ) {
+		$options = get_option( $group, [] );
+
+		$options[ $key ] = apply_filters( 'cp_live_settings_update', $value, $key, $group );
+		
+		return update_option( $group, $options );
+	}
+	
+	/**
+	 * Update service options
+	 *
+	 * @param $key
+	 * @param $service
+	 * @param $value
+	 *
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public static function update_service( $key, $service, $value ) {
+		return self::update( $key, $value, "cp_live_{$service}_options" );
 	}
 
-	public static function get_item_type( $key, $default = '' ) {
-		return self::get( $key, $default, 'cpl_item_type_options' );
-	}
-
-	public static function get_staff( $key, $default = '' ) {
-		return self::get( $key, $default, 'cp_live_options' );
+	/**
+	 * Update Advanced option
+	 * 
+	 * @param $key
+	 * @param $value
+	 *
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public static function update_advanced( $key, $value ) {
+		return self::update( $key, $value, 'cp_live_advanced_options' );
 	}
 
 	/**
@@ -83,83 +138,118 @@ class Settings {
 	 */
 	protected function __construct() {
 		add_action( 'cmb2_admin_init', [ $this, 'register_main_options_metabox' ] );
-		add_action( 'cmb2_save_options_page_fields', 'flush_rewrite_rules' );
+		add_action( 'cmb2_save_options_page_fields', [ $this, 'update_schedule' ] );
+	}
+
+	/**
+	 * Update the schedule when the options change
+	 * 
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function update_schedule() {
+		// the interval may have been changed. Unschedule the hook so that it reschedules with the correct interval
+		if ( $check = wp_next_scheduled( 'cp_live_check' ) ) {
+			wp_unschedule_event( $check, 'cp-live-check' );
+		}
 	}
 
 	public function register_main_options_metabox() {
 
-		$post_type = cp_live()->setup->post_types->item_type_enabled() ? cp_live()->setup->post_types->item_type->post_type : cp_live()->setup->post_types->item->post_type;
 		/**
 		 * Registers main options page menu item and form.
 		 */
 		$args = array(
-			'id'           => 'cpl_main_options_page',
-			'title'        => 'Settings',
+			'id'           => 'cp_live_main_options_page',
+			'title'        => 'CP Live',
 			'object_types' => array( 'options-page' ),
-			'option_key'   => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'option_key'   => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => 'Main',
-			'parent_slug'  => 'edit.php?post_type=' . $post_type,
+			'parent_slug'  => 'options-general.php',
 			'display_cb'   => [ $this, 'options_display_with_tabs'],
 		);
 
 		$main_options = new_cmb2_box( $args );
 
-		/**
-		 * Options fields ids only need
-		 * to be unique within this box.
-		 * Prefix is not needed.
-		 */
 		$main_options->add_field( array(
-			'name'    => __( 'Primary Color', 'cp-live' ),
-			'desc'    => __( 'The primary color to use in the templates.', 'cp-live' ),
-			'id'      => 'color_primary',
-			'type'    => 'colorpicker',
-			'default' => '#333333',
+			'name' => __( 'Display Options', 'cp-live' ),
+			'id'   => 'display_options',
+			'type' => 'title',
 		) );
 
 		$main_options->add_field( array(
-			'name'         => __( 'Site Logo', 'cp-live' ),
-			'desc'         => sprintf( __( 'The logo to use for %s.', 'cp-live' ), cp_live()->setup->post_types->item->plural_label ),
-			'id'           => 'logo',
-			'type'         => 'file',
-			// query_args are passed to wp.media's library query.
-			'query_args'   => array(
-				// Or only allow gif, jpg, or png images
-				 'type' => array(
-				     'image/gif',
-				     'image/jpeg',
-				     'image/png',
-				 ),
+			'name'    => __( 'When Not Live', 'cp-live' ),
+			'id'      => 'not_live_display',
+			'type'    => 'radio',
+			'options' => [
+				'most_recent' => __( 'Show most recent video', 'cp-live' ),
+				'countdown'   => __( 'Show countdown to the next stream', 'cp-live' ),
+			],
+			'default' => 'most_recent',
+		) );
+
+		$main_options->add_field( array(
+			'name' => __( 'Live Stream Schedule(s)', 'cp-live' ),
+			'id'   => 'live_stream_title',
+			'type' => 'title',
+		) );
+		
+		$group_field_id = $main_options->add_field( array(
+			'id'          => 'schedule_group',
+			'type'        => 'group',
+			'repeatable'  => true, // use false if you want non-repeatable group
+			'options'     => array(
+				'group_title'   => __( 'Schedule {#}', 'cp-live' ),
+				'add_button'    => __( 'Add Another Schedule', 'cp-live' ),
+				'remove_button' => __( 'Remove Schedule', 'cp-live' ),
+				'sortable'      => false,
 			),
-			'preview_size' => 'thumbnail', // Image size to use when previewing in the admin
 		) );
 
-		$main_options->add_field( array(
-			'name'         => __( 'Default Thumbnail', 'cp-live' ),
-			'desc'         => sprintf( __( 'The default thumbnail image to use for %s.', 'cp-live' ), cp_live()->setup->post_types->item->plural_label ),
-			'id'           => 'default_thumbnail',
-			'type'         => 'file',
-			// query_args are passed to wp.media's library query.
-			'query_args'   => array(
-				// Or only allow gif, jpg, or png images
-				 'type' => array(
-				     'image/gif',
-				     'image/jpeg',
-				     'image/png',
-				 ),
+		$main_options->add_group_field( $group_field_id, array(
+			'name'    => 'Day',
+			'id'      => 'day',
+			'type'    => 'select',
+			'options' => [
+				'sunday'    => __( 'Sunday', 'cp-live' ),
+				'monday'    => __( 'Monday', 'cp-live' ),
+				'tuesday'   => __( 'Tuesday', 'cp-live' ),
+				'wednesday' => __( 'Wednesday', 'cp-live' ),
+				'thursday'  => __( 'Thursday', 'cp-live' ),
+				'friday'    => __( 'Friday', 'cp-live' ),
+				'saturday'  => __( 'Saturday', 'cp-live' ),
+			],
+		) );
+
+		$main_options->add_group_field( $group_field_id, array(
+			'name'        => 'Time',
+			'id'          => 'time',
+			'type'        => 'text_time',
+			'attributes'  => array(
+				'data-timepicker' => json_encode( array(
+//					'timeOnlyTitle' => __( 'Choose your Time', 'cp-live' ),
+//					'timeFormat'    => 'HH:mm',
+					'stepMinute'    => 1, // 1 minute increments instead of the default 5
+				) ),
 			),
-			'preview_size' => 'medium', // Image size to use when previewing in the admin
+			'time_format' => 'h:i a',
 		) );
 
-		$this->item_options();
-
-		if ( cp_live()->setup->post_types->item_type_enabled() ) {
-			$this->item_type_options();
-		}
-
-		if ( cp_live()->setup->post_types->speaker_enabled() ) {
-			$this->speaker_options();
+		foreach( cp_live()->services->get_active_services() as $service => $data ) {
+			$box = new_cmb2_box( array(
+				'id'           => "cp_live_{$service}_options_page",
+				'title'        => 'CP Live Settings',
+				'object_types' => array( 'options-page' ),
+				'option_key'   => "cp_live_{$service}_options",
+				'parent_slug'  => 'cp_live_main_options',
+				'tab_group'    => 'cp_live_main_options',
+				'tab_title'    => $data['label'],
+				'display_cb'   => [ $this, 'options_display_with_tabs' ],
+			) );
+			
+			cp_live()->services->active[ $service ]->settings( $box );
 		}
 
 		$this->advanced_options();
@@ -168,12 +258,12 @@ class Settings {
 		 * Registers tertiary options page, and set main item as parent.
 		 */
 		$args = array(
-			'id'           => 'cpl_license_options_page',
-			'title'        => 'Settings',
+			'id'           => 'cp_live_license_options_page',
+			'title'        => 'CP Live Settings',
 			'object_types' => array( 'options-page' ),
-			'option_key'   => 'cpl_license',
-			'parent_slug'  => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'option_key'   => 'cp_live_license',
+			'parent_slug'  => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => 'License',
 			'display_cb'   => [ $this, 'options_display_with_tabs' ]
 		);
@@ -193,11 +283,11 @@ class Settings {
 		 */
 		$args = array(
 			'id'           => 'cpl_item_options_page',
-			'title'        => 'Settings',
+			'title'        => 'CP Live Settings',
 			'object_types' => array( 'options-page' ),
 			'option_key'   => 'cpl_item_options',
-			'parent_slug'  => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'parent_slug'  => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => cp_live()->setup->post_types->item->plural_label,
 			'display_cb'   => [ $this, 'options_display_with_tabs' ],
 		);
@@ -233,11 +323,11 @@ class Settings {
 		 */
 		$args = array(
 			'id'           => 'cpl_item_type_options_page',
-			'title'        => 'Settings',
+			'title'        => 'CP Live Settings',
 			'object_types' => array( 'options-page' ),
 			'option_key'   => 'cpl_item_type_options',
-			'parent_slug'  => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'parent_slug'  => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => cp_live()->setup->post_types->item_type->plural_label,
 			'display_cb'   => [ $this, 'options_display_with_tabs' ],
 		);
@@ -273,11 +363,11 @@ class Settings {
 		 */
 		$args = array(
 			'id'           => 'cpl_speaker_options_page',
-			'title'        => 'Settings',
+			'title'        => 'CP Live Settings',
 			'object_types' => array( 'options-page' ),
 			'option_key'   => 'cpl_speaker_options',
-			'parent_slug'  => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'parent_slug'  => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => cp_live()->setup->post_types->speaker->plural_label,
 			'display_cb'   => [ $this, 'options_display_with_tabs' ],
 		);
@@ -312,12 +402,12 @@ class Settings {
 		 * Registers secondary options page, and set main item as parent.
 		 */
 		$args = array(
-			'id'           => 'cpl_advanced_options_page',
-			'title'        => 'Settings',
+			'id'           => 'cp_live_advanced_options_page',
+			'title'        => 'CP Live Settings',
 			'object_types' => array( 'options-page' ),
-			'option_key'   => 'cpl_advanced_options',
-			'parent_slug'  => 'cpl_main_options',
-			'tab_group'    => 'cpl_main_options',
+			'option_key'   => 'cp_live_advanced_options',
+			'parent_slug'  => 'cp_live_main_options',
+			'tab_group'    => 'cp_live_main_options',
 			'tab_title'    => 'Advanced',
 			'display_cb'   => [ $this, 'options_display_with_tabs' ],
 		);
@@ -325,33 +415,85 @@ class Settings {
 		$advanced_options = new_cmb2_box( $args );
 
 		$advanced_options->add_field( array(
-			'name' => __( 'Modules' ),
-			'id'   => 'modules_enabled',
+			'name' => __( 'Cron Settings' ),
+			'id'   => 'cron_settings',
 			'type' => 'title',
 		) );
 
 		$advanced_options->add_field( array(
-			'name'    => __( 'Enable' ) . ' ' . cp_live()->setup->post_types->item_type->plural_label,
-			'id'      => 'item_type_enabled',
-			'type'    => 'radio_inline',
-			'default' => 1,
-			'options' => [
-				1 => __( 'Enable', 'cp-live' ),
-				0 => __( 'Disable', 'cp-live' ),
-			]
+			'name'       => __( 'Request Interval', 'cp-live' ),
+			'desc'       => __( 'How many minutes between each live video check. Some services limit the number of requests, so adjust this number depending on the number of requests your service supports.', 'cp-live' ),
+			'id'         => 'cron_interval',
+			'type'       => 'text',
+			'attributes' => array(
+				'type'    => 'number',
+				'pattern' => '\d*',
+			),
+			'default'    => '2',
 		) );
 
 		$advanced_options->add_field( array(
-			'name'    => __( 'Enable' ) . ' ' . cp_live()->setup->post_types->speaker->plural_label,
-			'id'      => 'speaker_enabled',
-			'type'    => 'radio_inline',
-			'default' => 1,
-			'options' => [
-				1 => __( 'Enable', 'cp-live' ),
-				0 => __( 'Disable', 'cp-live' ),
-			]
+			'name'       => __( 'Buffer Before', 'cp-live' ),
+			'desc'       => __( 'The number of minutes before the designated time to start checking for a live stream.', 'cp-live' ),
+			'id'         => 'buffer_before',
+			'type'       => 'text',
+			'attributes' => array(
+				'type'    => 'number',
+				'pattern' => '\d*',
+			),
+			'default'    => '5',
 		) );
 
+		$advanced_options->add_field( array(
+			'name'       => __( 'Buffer After', 'cp-live' ),
+			'desc'       => __( 'The number of minutes after the designated time to stop checking for a live stream if one has not been found.', 'cp-live' ),
+			'id'         => 'buffer_after',
+			'type'       => 'text',
+			'attributes' => array(
+				'type'    => 'number',
+				'pattern' => '\d*',
+			),
+			'default'    => '10',
+		) );
+
+		$advanced_options->add_field( [
+			'name'        => __( 'Live Video Duration', 'cp-live' ),
+			'id'          => 'live_video_duration',
+			'type'        => 'text',
+			'default'     => '6',
+			'description' => __( 'How many hours to show the service as live once the video has started.', 'cp-live' ),
+			'attributes'  => array(
+				'type'    => 'number',
+				'pattern' => '\d*',
+			),
+		] );
+		
+		$advanced_options->add_field( array(
+			'name' => __( 'Force Pull', 'cp-live' ),
+			'desc' => __( 'Check this box to force a check for a live feed right now.', 'cp-live' ),
+			'id'   => 'feed_check',
+			'type' => 'checkbox',
+		) );
+
+		$advanced_options->add_field( array(
+			'name' => __( 'Services' ),
+			'id'   => 'services_enabled',
+			'type' => 'title',
+		) );
+
+		foreach ( cp_live()->services->get_available_services() as $service => $data ) {
+			$advanced_options->add_field( array(
+				'name'    => sprintf( __( 'Enable %s Live', 'cp-live' ), $data['label'] ),
+				'id'      => $service . '_enabled',
+				'type'    => 'radio_inline',
+				'default' => $data['enabled'],
+				'options' => [
+					1 => __( 'Enable', 'cp-live' ),
+					0 => __( 'Disable', 'cp-live' ),
+				]
+			) );
+		}
+		
 	}
 
 	/**

@@ -14,16 +14,12 @@
   "require": {
     "php": ">=7.0.0",
     "composer/installers": "*",
-    "wpackio/enqueue": "^3.4",
-    "smadeira/ministry-platform-api": "^2.0.0",
-    "deliciousbrains/wp-background-processing": "^1.0"
+    "wpackio/enqueue": "^3.4"
   },
   "autoload": {
     "psr-4": {
       "CP_Live\\": "includes/",
-      "MinistryPlatform\\": "includes/Integrations/MinistryPlatform/",
-      "ChurchPlugins\\": "includes/ChurchPlugins/",
-      "PlanningCenterAPI\\": "includes/ChMS/planning-center-api/src/"
+      "ChurchPlugins\\": "includes/ChurchPlugins/"
     }
   },
   "config": {
