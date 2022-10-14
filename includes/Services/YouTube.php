@@ -52,9 +52,9 @@ class YouTube extends Service{
 			return;
 		}
 		
-		$url = sprintf( 'https://youtube.com/watch?v=%s', $body->items[0]->id->videoId );
+		$url = sprintf( 'https://youtube.com/watch?v=%s', urlencode( $body->items[0]->id->videoId ) );
 		
-		$this->update( 'video_url', urlencode( $url ) );
+		$this->update( 'video_url', $url );
 		
 		$this->set_live();
 	}
