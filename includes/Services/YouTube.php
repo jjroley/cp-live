@@ -9,24 +9,72 @@ class YouTube extends Service{
 	public function add_actions() {
 		parent::add_actions();
 	}
-	
+
 	/**
-	 * Check the status of a channel, update the meta if live
+	 * Check the sites to see if any of them are live
 	 * 
-	 * @return void
-	 * @since  1.0.1
+	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
 	public function check() {
 
-		$channel_id = $this->get( 'channel_id' );
-		$api_key    = $this->get( 'api_key' );
+		$sites_live_video = get_site_option( 'cp_sites_live_video', [] );
+		$sites_live       = get_site_option( 'cp_sites_live', [] );
 		
-		if ( empty( $channel_id ) || empty( $api_key ) ) {
-			return;
+		foreach( $this->sites_to_check() as $site_id => $data ) {
+			$live_duration = $data['live_duration'] ?? 6;
+			
+			if ( empty( $live_duration ) ) {
+				$live_duration = 6;
+			}
+			
+			$live_duration = $live_duration * HOUR_IN_SECONDS;
+			
+			if ( isset( $sites_live[ $site_id ] ) && isset( $sites_live[ $site_id ]['started'] ) ) {
+				$duration = time() - $sites_live[ $site_id ]['started'];
+				
+				// keep live if we are within the live duration window
+				if ( $duration < $live_duration ) {
+					continue;
+				} 
+			}
+			
+			$sites_live[ $site_id ] = false;
+			
+			// return early if the channel is not set or we don't pass the time check
+			if ( empty( $data['api_key'] ) || empty( $data['channel'] ) || ! $this->time_check( $data['times'] ) ) {
+				continue;
+			}
+			
+			$video_id = $this->get_channel_status( $data['channel'], $data['api_key'] );
+
+			// if we don't have a video, bail early
+			if ( ! $video_id ) {
+				continue;
+			}
+
+			$sites_live[ $site_id ] = [ 'video_id' => $video_id, 'started' => time() ];
+			$sites_live_video[ $site_id ] = $video_id;
 		}
-		
+	
+		// live_video doesn't get overwritten with null values, so it will always have the latest video
+		update_site_option( 'cp_sites_live', $sites_live );
+		update_site_option( 'cp_sites_live_video', $sites_live_video );
+	}
+
+	/**
+	 * Check the status of a channel, return the video_id if live
+	 * 
+	 * @param $channel_id
+	 * @param $api_key
+	 *
+	 * @return false
+	 * @since  1.0.1
+	 *
+	 * @author Tanner Moushey
+	 */
+	protected function get_channel_status( $channel_id, $api_key ) {
 		$args = [
 			'part'      => 'snippet',
 			'type'      => 'video',
@@ -42,76 +90,137 @@ class YouTube extends Service{
 
 		// if we don't have a valid body, bail early
 		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
-			return;
+			return false;
 		}
 
 		$body = json_decode( $body );
 
 		// make sure we have items
 		if ( empty( $body->items ) ) {
-			return;
+			return false;
 		}
 		
-		$url = sprintf( 'https://youtube.com/watch?v=%s', $body->items[0]->id->videoId );
-		
-		$this->update( 'video_url', urlencode( $url ) );
-		
-		$this->set_live();
+		return $body->items[0]->id->videoId;
 	}
 
 	/**
-	 * Return the embed for YouTube
+	 * Get the sites to check for a live feed
 	 * 
-	 * @return string
+	 * @return array|mixed
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
-	public function get_embed() {
-		global $wp_embed;
-
-		if ( ! $video_url = $this->get( 'video_url' ) ) {
-			return '';
+	protected function sites_to_check() {
+		if ( ! function_exists( 'cp_locations' ) ) {
+			return [];
 		}
 		
-		return $wp_embed->autoembed( $video_url );
+		if ( $sites = get_site_transient( 'cp_sites_to_check' ) ) {
+			return $sites;
+		}
+		
+		$sites = [];
+		
+		do_action( 'cploc_multisite_switch_to_main_site' );
+
+		$locations = \CP_Locations\Models\Location::get_all_locations(true);
+		
+		foreach( $locations as $location ) {
+			if ( $channel_id = get_post_meta( $location->ID, 'youtube_channel_id', true ) ) {
+				$sites[ $location->ID ] = [
+					'channel'  => $channel_id,
+					'times'    => get_post_meta( $location->ID, 'service_times', true ),
+					'duration' => get_post_meta( $location->ID, 'live_video_duration', true ),
+					'api_key'  => get_post_meta( $location->ID, 'youtube_api_key', true ),
+				];
+			}
+		}
+		
+		do_action( 'cploc_multisite_restore_current_blog');
+		
+		set_site_transient( 'cp_sites_to_check', $sites );
+		return $sites;
 	}
 
 	/**
-	 * YouTube Settings
+	 * Check if the provided times fall within the required window.
 	 * 
-	 * @param $cmb
+	 * @param $times
 	 *
 	 * @since  1.0.0
+	 * @return bool
 	 *
 	 * @author Tanner Moushey
 	 */
+	protected function time_check( $times ) {
+		$day       = strtolower( date( 'l', current_time( 'timestamp' ) ) );
+		$timestamp = current_time( 'timestamp' );
+		$buffer    = 8 * MINUTE_IN_SECONDS; // start watching 15 minutes before the start time
+		$duration  = 12 * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min. 
+		
+		if ( empty( $times ) ) {
+			return false;
+		}
+		
+		foreach( $times as $time ) {
+			if ( $day !== $time['day'] ) {
+				continue;
+			}
+
+			$start = strtotime( 'today ' . $time['time'], current_time( 'timestamp' ) ) - $buffer;
+			$end   = $start + $duration + $buffer;
+			
+			// if we fall in the window, continue with the check
+			if ( $timestamp > $start && $timestamp < $end ) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	public function settings( $cmb ) {
-		// add prefix to fields if we are not in the global context. Other services may use the same id.
-		$prefix = 'global' != $this->context ? $this->id . '_' : '';
-
 		$cmb->add_field( [
 			'name'        => __( 'YouTube Channel ID', 'cp-live' ),
-			'id'          => $prefix . 'channel_id',
+			'id'          => 'youtube_channel_id',
 			'type'        => 'text',
 			'description' => __( 'The ID of the channel to check.', 'cp-live' ),
-		] );		
+		], 5 );		
 
 		$cmb->add_field( [
 			'name'        => __( 'YouTube API Key', 'cp-live' ),
-			'id'          => $prefix . 'api_key',
+			'id'          => 'youtube_api_key',
 			'type'        => 'text',
 			'description' => __( 'Used to connect to the YouTube API.', 'cp-live' ),
-		] );
+		], 5 );
+
+		$cmb->add_field( [
+			'name'        => __( 'Live Video Duration', 'cp-live' ),
+			'id'          => 'live_video_duration',
+			'type'        => 'text',
+			'default'     => '6',
+			'description' => __( 'How many hours to show this channel as live once the video has started.', 'cp-live' ),
+			'attributes'  => array(
+				'type'    => 'number',
+				'pattern' => '\d*',
+			),
+		], 5 );
+
+		$cmb->add_field( [
+			'name'    => __( 'Channel Status', 'cp-live' ),
+			'id'      => 'channel_live',
+			'type'    => 'radio_inline',
+			'options' => [ 1 => __( 'Live', 'cp-live' ), 0 => __( 'Not Live', 'cp-live' ) ],
+			'default' => 0,
+		], 5 );
 
 		$cmb->add_field( [
 			'name'        => __( 'Video URL', 'cp-live' ),
-			'id'          => $prefix . 'video_url',
+			'id'          => 'video_url',
 			'type'        => 'text_url',
 			'description' => __( 'The URL of the most recent or currently live video.', 'cp-live' ),
-		] );
-		
-		parent::settings( $cmb );
+		], 5 );
 	}
 	
 }
