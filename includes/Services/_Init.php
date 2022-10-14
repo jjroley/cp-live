@@ -45,10 +45,55 @@ class _Init {
 
 	protected function actions() {
 		add_action( 'plugins_loaded', [ $this, 'load_services' ] );
+		add_action( 'cp_live_check', [ $this, 'check' ] );
+		add_filter( 'body_class', [ $this, 'live_body_class' ] );
 	}
 	
 	/** Actions Methods **************************************/
+	
+	/**
+	 * Add class to body when location is live
+	 * 
+	 * @param $classes
+	 *
+	 * @return mixed
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function live_body_class( $classes ) {
+		$live_class = apply_filters( 'cp_live_body_class_is_live', 'cp-is-live' );
+		$not_live_class = apply_filters( 'cp_live_body_class_is_not_live', 'cp-not-live' );
+		
+		$classes[] = cp_live()->is_live() ? $live_class : $not_live_class;
+		
+		return $classes;
+	}
+	
+	/**
+	 * Check schedules and trigger service live checks
+	 *
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function check() {
 
+		$check_for_live = cp_live()->schedule_is_now();
+
+		foreach ( $this->active as $service ) {
+			/** @var $service Service */
+
+			// check live video
+			$service->check_live_status();
+
+			if ( $check_for_live ) {
+				$service->check();
+			}
+		}
+
+	}
+	
 	/**
 	 * Return all available services
 	 * 

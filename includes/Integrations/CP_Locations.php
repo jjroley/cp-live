@@ -3,6 +3,7 @@
 namespace CP_Live\Integrations;
 
 use CP_Live\Admin\Settings;
+use CP_Live\Services\Service;
 
 class CP_Locations {
 
@@ -28,10 +29,58 @@ class CP_Locations {
 	 * Add Hooks and Actions
 	 */
 	public function __construct() {
+
+		add_action( 'cp_live_settings_advanced', [ $this, 'advanced_settings' ] );
+
+		if ( ! Settings::get_advanced( 'cp_locations_enabled', false ) ) {
+			return;
+		}
+		
 		add_action( 'save_post_cploc_location', [ $this, 'flush_cache' ] );
 		add_filter( 'body_class', [ $this, 'live_body_class' ] );
 		add_action( 'cploc_location_meta_details', [ $this, 'location_meta' ], 10, 2 );
 		add_action( 'cp_live_check', [ $this, 'check' ] );
+	}
+
+	/**
+	 * Legacy function to return the embed from the location regardless of the live status
+	 * 
+	 * @param $location_id
+	 *
+	 * @return string
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public static function get_location_embed( $location_id = false ) {
+		if ( ! $location_id ) {
+			$location_id = apply_filters( 'cp_live_video_location_id_default', get_query_var( 'cp_location_id' ) );
+		}
+		
+		$embed = '';
+		
+		if ( ! $location_id ) {
+			return $embed;
+		}
+
+		// return the embed from the live service if one exists
+		// reverse the array to make the top one the default if none are live
+		foreach( array_reverse( cp_live()->services->active ) as $service ) {
+			/** @var $service Service */
+			
+			$service->set_context( $location_id );
+			
+			$embed = $service->get_embed();
+			$is_live = $service->is_live();
+			
+			$service->set_context();
+			
+			if ( $is_live ) {
+				return $embed;
+			}
+		}
+		
+		return $embed;
 	}
 	
 	/**
@@ -53,19 +102,78 @@ class CP_Locations {
 			return false;
 		} 
 		
-		$sites_live = get_site_option( 'cp_sites_live', [] );
+		$is_live = false;
 		
-		return isset( $sites_live[ $location_id ] ) ? $sites_live[ $location_id ] : false;
+		foreach( cp_live()->services->active as $service ) {
+			/** @var $service Service */
+			$service->set_context( $location_id );
+			
+			$is_live = $service->is_live();
+
+			// reset context
+			$service->set_context();
+			
+			if ( $is_live ) {
+				break;
+			}
+		}		
+		
+		return $is_live;
 	}
 
+	/**
+	 * Add class to body when location is live
+	 * 
+	 * @param $classes
+	 *
+	 * @return mixed
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
 	public function live_body_class( $classes ) {
 		if ( ! $location_id = get_query_var( 'cp_location_id' ) ) {
 			return $classes;
 		} 
 		
-		$classes[] = self::is_location_live( $location_id ) ? 'cp-is-live' : 'cp-not-live';
+		$live_class = apply_filters( 'cp_live_location_body_class_is_live', 'cp-location-is-live' );
+		$not_live_class = apply_filters( 'cp_live_location_body_class_is_not_live', 'cp-location-not-live' );
+		
+		$classes[] = self::is_location_live( $location_id ) ? $live_class : $not_live_class;
 		
 		return $classes;
+	}
+	
+	/**
+	 * Check the sites to see if any of them are live
+	 * 
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function check() {
+
+		foreach( $this->sites_to_check() as $location_id => $data ) {
+
+			$schedules      = get_post_meta( $location_id, 'schedule_group', true );
+			$check_for_live = cp_live()->schedule_is_now( $schedules );
+			
+			foreach( cp_live()->services->active as $service ) {
+				/** @var $service Service */
+				$service->set_context( $location_id );
+				
+				// check live video
+				$service->check_live_status();
+				
+				if ( $check_for_live ) {
+					$service->check();
+				}
+				
+				$service->set_context();
+			}
+			
+		}
+	
 	}
 	
 	/**
@@ -82,9 +190,6 @@ class CP_Locations {
 	/**
 	 * Add meta for live stream
 	 * 
-	 * @param $cmb
-	 * @param $object
-	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -93,17 +198,6 @@ class CP_Locations {
 		if ( ! function_exists( 'cp_locations' ) ) {
 			return;
 		}
-
-		$cmb = new_cmb2_box( [
-			'id'           => "location_live_schedule_meta",
-			'title'        => __( 'Live Schedules', 'cp-live' ),
-			'object_types' => [ cp_locations()->setup->post_types->locations->post_type ],
-			'context'      => 'normal',
-			'priority'     => 'high',
-			'show_names'   => true,
-		] );
-		
-		Settings::schedule_fields( $cmb );
 		
 		foreach( cp_live()->services->get_active_services() as $service => $details ) {
 			$cmb = new_cmb2_box( [
@@ -115,62 +209,30 @@ class CP_Locations {
 				'show_names'   => true,
 			] );
 			
-			cp_live()->services->active[ $service ]->settings( $cmb );
+			cp_live()->services->active[ $service ]->set_context( 'location' );
+			cp_live()->services->active[ $service ]->settings( $cmb, true );
+			cp_live()->services->active[ $service ]->set_context();
 		}
-	}	
-	
-	/**
-	 * Check the sites to see if any of them are live
-	 * 
-	 * @since  1.0.0
-	 *
-	 * @author Tanner Moushey
-	 */
-	public function check() {
-
-		$sites_live_video = get_site_option( 'cp_sites_live_video', [] );
-		$sites_live       = get_site_option( 'cp_sites_live', [] );
 		
-		foreach( $this->sites_to_check() as $site_id => $data ) {
-			$live_duration = $data['live_duration'] ?? 6;
-			
-			if ( empty( $live_duration ) ) {
-				$live_duration = 6;
-			}
-			
-			$live_duration = $live_duration * HOUR_IN_SECONDS;
-			
-			if ( isset( $sites_live[ $site_id ] ) && isset( $sites_live[ $site_id ]['started'] ) ) {
-				$duration = time() - $sites_live[ $site_id ]['started'];
-				
-				// keep live if we are within the live duration window
-				if ( $duration < $live_duration ) {
-					continue;
-				} 
-			}
-			
-			$sites_live[ $site_id ] = false;
-			
-			// return early if the channel is not set or we don't pass the time check
-			if ( empty( $data['api_key'] ) || empty( $data['channel'] ) || ! $this->time_check( $data['times'] ) ) {
-				continue;
-			}
-			
-			$video_id = $this->get_channel_status( $data['channel'], $data['api_key'] );
+		$cmb = new_cmb2_box( [
+			'id'           => "location_live_schedule_meta",
+			'title'        => __( 'Live Schedules', 'cp-live' ),
+			'object_types' => [ cp_locations()->setup->post_types->locations->post_type ],
+			'context'      => 'normal',
+			'priority'     => 'high',
+			'show_names'   => true,
+		] );
+		
+		$cmb->add_field( array(
+			'name' => __( 'Force Pull', 'cp-live' ),
+			'desc' => __( 'Check this box and save to force a check for a live feed right now.', 'cp-live' ),
+			'id'   => 'feed_check',
+			'type' => 'checkbox',
+		) );
 
-			// if we don't have a video, bail early
-			if ( ! $video_id ) {
-				continue;
-			}
+		Settings::schedule_fields( $cmb );
 
-			$sites_live[ $site_id ] = [ 'video_id' => $video_id, 'started' => time() ];
-			$sites_live_video[ $site_id ] = $video_id;
-		}
-	
-		// live_video doesn't get overwritten with null values, so it will always have the latest video
-		update_site_option( 'cp_sites_live', $sites_live );
-		update_site_option( 'cp_sites_live_video', $sites_live_video );
-	}
+	}	
 	
 	/**
 	 * Get the sites to check for a live feed
@@ -180,7 +242,7 @@ class CP_Locations {
 	 *
 	 * @author Tanner Moushey
 	 */
-	protected function sites_to_check() {
+	public function sites_to_check() {
 		if ( ! function_exists( 'cp_locations' ) ) {
 			return [];
 		}
@@ -196,12 +258,10 @@ class CP_Locations {
 		$locations = \CP_Locations\Models\Location::get_all_locations(true);
 		
 		foreach( $locations as $location ) {
-			if ( $channel_id = get_post_meta( $location->ID, 'youtube_channel_id', true ) ) {
+			// make sure this location has a schedule
+			if ( get_post_meta( $location->ID, 'schedule_group', true ) ) {
 				$sites[ $location->ID ] = [
-					'channel'  => $channel_id,
-					'times'    => get_post_meta( $location->ID, 'service_times', true ),
-					'duration' => get_post_meta( $location->ID, 'live_video_duration', true ),
-					'api_key'  => get_post_meta( $location->ID, 'youtube_api_key', true ),
+					'schedule'    => get_post_meta( $location->ID, 'schedule_group', true ),
 				];
 			}
 		}
@@ -210,46 +270,28 @@ class CP_Locations {
 		
 		set_site_transient( 'cp_sites_to_check', $sites );
 		return $sites;
-	}	
-	
+	}
+
 	/**
-	 * Check the status of a channel, return the video_id if live
+	 * Add settings to the advanced tab
 	 * 
-	 * @param $channel_id
-	 * @param $api_key
+	 * @param $cmb
 	 *
-	 * @return false
-	 * @since  1.0.1
+	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
-	protected function get_channel_status( $channel_id, $api_key ) {
-		$args = [
-			'part'      => 'snippet',
-			'type'      => 'video',
-			'eventType' => 'live',
-			'channelId' => $channel_id,
-			'key'       => $api_key,
-		];
-
-		$url = 'https://www.googleapis.com/youtube/v3/search';
-
-		$search   = add_query_arg( $args, $url );
-		$response = wp_remote_get( $search );
-
-		// if we don't have a valid body, bail early
-		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
-			return false;
-		}
-
-		$body = json_decode( $body );
-
-		// make sure we have items
-		if ( empty( $body->items ) ) {
-			return false;
-		}
-		
-		return $body->items[0]->id->videoId;
-	}	
-	
+	public function advanced_settings( $cmb ) {
+		$cmb->add_field( array(
+			'name'    => __( 'Enable Location Streams', 'cp-live' ),
+			'id'      => 'cp_locations_enabled',
+			'desc'    => __( 'Enable this option to give each Location the ability to set their own live stream parameters.', 'cp-live' ),
+			'type'    => 'radio_inline',
+			'default' => 0,
+			'options' => [
+				1 => __( 'Enable', 'cp-live' ),
+				0 => __( 'Disable', 'cp-live' ),
+			]
+		) );
+	}
 }

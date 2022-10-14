@@ -25,6 +25,11 @@ class _Init {
 	 */
 	public $services;
 
+	/**
+	 * @var Integrations\_Init
+	 */
+	public $integrations;
+
 	public $enqueue;
 
 	/**
@@ -96,13 +101,16 @@ class _Init {
 	 */
 	protected function includes() {
 		require_once( 'Templates.php' );
+		
 		Admin\_Init::get_instance();
+		Setup\ShortCodes::get_instance();
+		
 		$this->setup = Setup\_Init::get_instance();
 		$this->services = Services\_Init::get_instance();
+		$this->integrations = Integrations\_Init::get_instance();
 	}
 	
 	protected function actions() {
-		add_action( 'plugins_loaded', [ $this, 'load_integrations' ] );
 		add_action( 'plugins_loaded', [ $this, 'load_services' ] );
 	}
 	
@@ -117,18 +125,95 @@ class _Init {
 
 	/** Helper Methods **************************************/
 
-	public function get_live_video( $status = 'any' ) {
-		$videos = Admin\Settings::get( 'live_videos', [] );
+	/**
+	 * Determine if any active services are live. Return the id of the first live service found
+	 * 
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function is_live() {
+		$is_live = false;
 		
-		
-	}
-	
-	public function load_integrations() {
-		if ( function_exists( 'cp_locations' ) ) {
-			Integrations\CP_Locations::get_instance();
+		foreach( $this->services->active as $id => $service ) {
+			/** @var $service Services\Service */
+			if ( $service->is_live() ) {
+				$is_live = $id;
+				break;	
+			}
 		}
 		
-		do_action( 'cp_live_load_integrations' );
+		return apply_filters( 'cp_live_is_live', $is_live );
+	}
+
+	/**
+	 * Return the live embed for the live service
+	 * 
+	 * @return mixed|void
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function get_live_embed() {
+		$embed = '';
+		
+		foreach( $this->services->active as $id => $service ) {
+			/** @var $service Services\Service */
+			if ( $service->is_live() ) {
+				$embed = $service->get_embed();
+				break;	
+			}
+		}
+		
+		return apply_filters( 'cp_live_get_live_embed', $embed );		
+	}
+
+	/**
+	 * Check if we are in the window of a schedule to check for a live stream
+	 * 
+	 * @param $schedules
+	 *
+	 * @return bool
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function schedule_is_now( $schedules = false ) {
+		if ( false === $schedules ) {
+			$schedules = Settings::get( 'schedule_group' );
+		}
+		
+		$day       = strtolower( date( 'l', current_time( 'timestamp' ) ) );
+		$timestamp = current_time( 'timestamp' );
+		$buffer    = Settings::get_advanced( 'buffer_before', 8 ) * MINUTE_IN_SECONDS; // start watching 15 minutes before the start time
+		$duration  = Settings::get_advanced( 'buffer_after', 12 ) * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min. 
+
+		if ( empty( $schedules ) ) {
+			return false;
+		}
+
+		foreach ( $schedules as $schedule ) {
+			if ( $day !== $schedule['day'] ) {
+				continue;
+			}
+			
+			if ( empty( $schedule['time'] ) ) {
+				continue;
+			}
+
+			foreach ( $schedule['time'] as $time ) {
+				$start = strtotime( 'today ' . $time, current_time( 'timestamp' ) ) - $buffer;
+				$end   = $start + $duration + $buffer;
+
+				// if we fall in the window, continue with the check
+				if ( $timestamp > $start && $timestamp < $end ) {
+					return true;
+				}
+			}
+		}
+
+		return false;		
 	}
 	
 	public function load_services() {

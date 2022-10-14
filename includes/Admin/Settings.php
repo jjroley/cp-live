@@ -447,7 +447,7 @@ class Settings {
 				'type'    => 'number',
 				'pattern' => '\d*',
 			),
-			'default'    => '5',
+			'default'    => '8',
 		) );
 
 		$advanced_options->add_field( array(
@@ -459,7 +459,7 @@ class Settings {
 				'type'    => 'number',
 				'pattern' => '\d*',
 			),
-			'default'    => '10',
+			'default'    => '12',
 		) );
 
 		$advanced_options->add_field( [
@@ -474,12 +474,7 @@ class Settings {
 			),
 		] );
 		
-		$advanced_options->add_field( array(
-			'name' => __( 'Force Pull', 'cp-live' ),
-			'desc' => __( 'Check this box to force a check for a live feed right now.', 'cp-live' ),
-			'id'   => 'feed_check',
-			'type' => 'checkbox',
-		) );
+		do_action( 'cp_live_settings_advanced', $advanced_options );
 
 		$advanced_options->add_field( array(
 			'name' => __( 'Services' ),
@@ -500,6 +495,18 @@ class Settings {
 			) );
 		}
 		
+		$advanced_options->add_field( array(
+			'name' => __( 'Force Pull' ),
+			'id'   => 'force_pull_title',
+			'type' => 'title',
+		) );		
+		
+		$advanced_options->add_field( array(
+			'name' => __( 'Force Pull', 'cp-live' ),
+			'desc' => __( 'Check this box and save to force a check for a live feed right now.', 'cp-live' ),
+			'id'   => 'feed_check',
+			'type' => 'checkbox',
+		) );	
 	}
 
 	/**
