@@ -33,155 +33,74 @@ class Resi extends Service{
 			$status = 'stream_missing';
 		}
 
-		// TODO: maybe create sermon when video goes live
-
 		$this->update( 'status', $status );
-		$this->update( 'channel_live', ( 'dynamic' === $status ) );
-	}
-
-	/**
-	 * Check the status of a channel, return the video_id if live
-	 * 
-	 * @param $channel_id
-	 * @param $api_key
-	 *
-	 * @return false
-	 * @since  1.0.1
-	 *
-	 * @author Tanner Moushey
-	 */
-	protected function get_channel_status( $channel_id, $api_key ) {
-		$args = [
-			'part'      => 'snippet',
-			'type'      => 'video',
-			'eventType' => 'live',
-			'channelId' => $channel_id,
-			'key'       => $api_key,
-		];
-
-		$url = 'https://www.googleapis.com/youtube/v3/search';
-
-		$search   = add_query_arg( $args, $url );
-		$response = wp_remote_get( $search );
-
-		// if we don't have a valid body, bail early
-		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
-			return false;
-		}
-
-		$body = json_decode( $body );
-
-		// make sure we have items
-		if ( empty( $body->items ) ) {
-			return false;
-		}
 		
-		return $body->items[0]->id->videoId;
+		if ( 'dynamic' === $status ) {
+			$this->set_live();
+		}
 	}
 
 	/**
-	 * Get the sites to check for a live feed
+	 * Return the embed for Resi
 	 * 
-	 * @return array|mixed
+	 * @return string
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
-	protected function sites_to_check() {
-		if ( ! function_exists( 'cp_locations' ) ) {
-			return [];
+	public function get_embed() {
+		if ( ! $embed_id = $this->get( 'embed_id' ) ) {
+			return '';
 		}
 		
-		if ( $sites = get_site_transient( 'cp_sites_to_check' ) ) {
-			return $sites;
-		}
-		
-		$sites = [];
-		
-		do_action( 'cploc_multisite_switch_to_main_site' );
-
-		$locations = \CP_Locations\Models\Location::get_all_locations(true);
-		
-		foreach( $locations as $location ) {
-			if ( $channel_id = get_post_meta( $location->ID, 'youtube_channel_id', true ) ) {
-				$sites[ $location->ID ] = [
-					'channel'  => $channel_id,
-					'times'    => get_post_meta( $location->ID, 'service_times', true ),
-					'duration' => get_post_meta( $location->ID, 'live_video_duration', true ),
-					'api_key'  => get_post_meta( $location->ID, 'youtube_api_key', true ),
-				];
-			}
-		}
-		
-		do_action( 'cploc_multisite_restore_current_blog');
-		
-		set_site_transient( 'cp_sites_to_check', $sites );
-		return $sites;
+		ob_start(); ?>
+        <div id="resi-video-player" data-embed-id="<?php echo $embed_id ?>"></div>
+        <script type="application/javascript" src="https://control.resi.io/webplayer/loader.min.js"></script>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
-	 * Check if the provided times fall within the required window.
+	 * Resi Settings
 	 * 
-	 * @param $times
+	 * @param $cmb
 	 *
 	 * @since  1.0.0
-	 * @return bool
 	 *
 	 * @author Tanner Moushey
 	 */
-	protected function time_check( $times ) {
-		$day       = strtolower( date( 'l', current_time( 'timestamp' ) ) );
-		$timestamp = current_time( 'timestamp' );
-		$buffer    = 8 * MINUTE_IN_SECONDS; // start watching 15 minutes before the start time
-		$duration  = 12 * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min. 
-		
-		if ( empty( $times ) ) {
-			return false;
-		}
-		
-		foreach( $times as $time ) {
-			if ( $day !== $time['day'] ) {
-				continue;
-			}
-
-			$start = strtotime( 'today ' . $time['time'], current_time( 'timestamp' ) ) - $buffer;
-			$end   = $start + $duration + $buffer;
-			
-			// if we fall in the window, continue with the check
-			if ( $timestamp > $start && $timestamp < $end ) {
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	
 	public function settings( $cmb ) {
 		
+		// add prefix to fields if we are not in the global context. Other services may use the same id.
+		$prefix = 'global' != $this->context ? $this->id . '_' : '';
+
 		$cmb->add_field( [
-			'name'            => __( 'Reusable Embed ID', 'cp-live' ),
+			'name'            => __( 'Embed ID', 'cp-live' ),
 			'desc'            => __( 'Add the Embed ID found in the Resi Web Channel embed code.', 'cp-live' ),
-			'id'              => 'embed_id',
+			'id'              => $prefix . 'embed_id',
 			'type'            => 'text',
 			'sanitization_cb' => 'sanitize_key',
 			'escape_cb'       => 'sanitize_key',
 		] );
 
 		$cmb->add_field( [
-			'name' => __( 'Resi Stream URL', 'cp-live' ),
+			'name' => __( 'Stream URL', 'cp-live' ),
 			'desc' => __( 'Add the Stream URL from Resi Web Channel Profile that ends in Manifest.mpd', 'cp-live' ),
-			'id'   => 'stream_url',
+			'id'   => $prefix . 'stream_url',
 			'type' => 'text_url'
 		] );
 
 		$cmb->add_field( [
-			'name'    => __( 'Channel Status', 'cp-live' ),
-			'id'      => 'channel_live',
-			'type'    => 'radio_inline',
-			'options' => [ 1 => __( 'Live', 'cp-live' ), 0 => __( 'Not Live', 'cp-live' ) ],
-			'default' => 0,
-		], 5 );
-		
+			'name' => __( 'Stream Status', 'cp-live' ),
+			'desc' => __( 'The status of the stream last time it was checked.', 'cp-live' ),
+			'id'   => $prefix . 'status',
+			'type' => 'text',
+			'attributes' => [
+				'disabled' => true,				
+			],			
+		] );
+
+		parent::settings( $cmb );
 	}
 	
 }
