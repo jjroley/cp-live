@@ -46,8 +46,7 @@ class ShortCodes {
 			add_shortcode( 'cp-live-video', [ $this, 'live_video_cb' ] );
 		}
 
-		add_shortcode( 'cp-groups', [ $this, 'groups_cb' ] );
-		add_shortcode( 'cp-groups-filter', [ $this, 'groups_filter_cb' ] );
+		add_shortcode( 'cp-live', [ $this, 'live_cb' ] );
 	}
 
 	protected function actions() {}
@@ -61,7 +60,7 @@ class ShortCodes {
 	}
 	
 	/**
-	 * Print groups
+	 * Print live video shortcode
 	 * 
 	 * @param $atts
 	 *
@@ -70,26 +69,10 @@ class ShortCodes {
 	 *
 	 * @author Tanner Moushey
 	 */
-	public function groups_cb( $atts ) {
+	public function live_cb( $atts ) {
 		ob_start();
-		Templates::get_template_part( "shortcodes/group-list" );
+		Templates::get_template_part( "shortcodes/live" );
 		return ob_get_clean();
-	}
-
-	/**
-	 * Print groups filters
-	 * 
-	 * @param $atts
-	 *
-	 * @since  1.0.0
-	 *
-	 * @author Tanner Moushey
-	 */
-	public function groups_filter_cb( $atts ) {
-		ob_start();
-		Templates::get_template_part( "shortcodes/filter" );
-		return ob_get_clean();
-		
 	}
 	
 }

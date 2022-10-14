@@ -53,6 +53,7 @@ class _Init {
 		$this->enqueue = new \WPackio\Enqueue( 'cpLive', 'dist', $this->get_version(), 'plugin', CP_LIVE_PLUGIN_FILE );
 		add_action( 'plugins_loaded', [ $this, 'maybe_setup' ], - 9999 );
 		add_action( 'init', [ $this, 'maybe_init' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
 	}
 
 	/**
@@ -89,7 +90,7 @@ class _Init {
 	 * @return void
 	 * @author costmo
 	 */
-	public function app_enqueue() {
+	public function enqueue_scripts() {
 		$this->enqueue->enqueue( 'styles', 'main', [] );
 		$this->enqueue->enqueue( 'scripts', 'main', [] );
 	}
@@ -158,10 +159,11 @@ class _Init {
 	public function get_live_embed() {
 		$embed = '';
 		
-		foreach( $this->services->active as $id => $service ) {
+		foreach( array_reverse( $this->services->active ) as $service ) {
 			/** @var $service Services\Service */
+			$embed = $service->get_embed();
+
 			if ( $service->is_live() ) {
-				$embed = $service->get_embed();
 				break;	
 			}
 		}
@@ -214,6 +216,46 @@ class _Init {
 		}
 
 		return false;		
+	}
+
+	/**
+	 * Return the next scheduled event
+	 * 
+	 * @param $schedules
+	 *
+	 * @return false|mixed|null
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function get_next_schedule( $schedules = false ) {
+		if ( false === $schedules ) {
+			$schedules = Settings::get( 'schedule_group' );
+		}
+		
+		$times = [];
+		
+		if ( empty( $schedules ) ) {
+			return false;
+		}
+
+		foreach ( $schedules as $schedule ) {
+			if ( empty( $schedule['time'] ) ) {
+				continue;
+			}
+
+			foreach ( $schedule['time'] as $time ) {
+				$times[] = strtotime( $schedule['day'] . ' ' . $time );
+			}
+		}
+		
+		asort( $times );
+		
+		if ( empty( $times ) ) {
+			return false;
+		}
+		
+		return array_shift( $times ); // - (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
 	}
 	
 	public function load_services() {

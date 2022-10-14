@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => '4ae717b4c71b1a3f440222e192fdfd273299bdb1',
+    'reference' => 'd18dcc4299d10c71dbf2f2aaff41ac95a8deb2e3',
     'name' => 'churchplugins/cp-live',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => '4ae717b4c71b1a3f440222e192fdfd273299bdb1',
+      'reference' => 'd18dcc4299d10c71dbf2f2aaff41ac95a8deb2e3',
     ),
     'composer/installers' => 
     array (
