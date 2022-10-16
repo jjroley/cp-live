@@ -33,7 +33,7 @@ class Resi extends Service{
 			$status = 'stream_missing';
 		}
 
-		$this->update( 'status', $status );
+		$this->update( 'status', (string) strtolower( $status ) );
 		
 		if ( 'dynamic' === $status ) {
 			$this->set_live();
