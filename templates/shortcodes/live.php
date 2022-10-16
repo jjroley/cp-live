@@ -21,7 +21,4 @@ $not_live_display = Settings::get( 'not_live_display', 'most_recent' );
 		}
 	}
 	?>
-	<?php if ( $is_live ) : ?>
-		<?php echo $embed; ?>
-	<?php endif; ?>
 </div>
