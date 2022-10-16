@@ -24,7 +24,7 @@ class Resi extends Service{
 			$xml = simplexml_load_file( $stream );
 
 			if ( ! empty( $xml ) ) {
-				$status = $xml->attributes()->{'type'};
+				$status = (string) strtolower( $xml->attributes()->{'type'} );
 
 			} else {
 				$status = 'stream_empty';
@@ -33,7 +33,7 @@ class Resi extends Service{
 			$status = 'stream_missing';
 		}
 
-		$this->update( 'status', (string) strtolower( $status ) );
+		$this->update( 'status', $status );
 		
 		if ( 'dynamic' === $status ) {
 			$this->set_live();
