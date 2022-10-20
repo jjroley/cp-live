@@ -118,7 +118,7 @@ abstract class Service {
 			'options' => [ 1 => __( 'Live', 'cp-live' ), 0 => __( 'Not Live', 'cp-live' ) ],
 			'default' => 0,
 			'attributes' => [
-				'disabled' => true,				
+//				'disabled' => true,				
 			],
 		] );		
 
