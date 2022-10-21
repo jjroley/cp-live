@@ -47,6 +47,7 @@ class _Init {
 		add_action( 'plugins_loaded', [ $this, 'load_services' ] );
 		add_action( 'cp_live_check', [ $this, 'check' ] );
 		add_filter( 'body_class', [ $this, 'live_body_class' ] );
+		add_action( 'admin_init', [ $this, 'maybe_force_pull' ] );
 	}
 	
 	/** Actions Methods **************************************/
@@ -92,6 +93,32 @@ class _Init {
 			}
 		}
 
+	}
+
+	/**
+	 * Force check of all active services. This also updates the live status to the service status.
+	 * 
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function maybe_force_pull() {
+		if ( ! Settings::get_advanced( 'feed_check', false ) ) {
+			return;
+		}
+
+		Settings::update_advanced( 'feed_check', 0 );
+		
+		add_action( 'admin_notices', function () {
+			printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', __( 'Force pull has been triggered.', 'cp-live' ) );
+		} );
+
+		foreach ( $this->active as $service ) {
+			/** @var $service Service */
+			$service->update( 'is_live', 0 );
+			$service->check();
+		}
+		
 	}
 	
 	/**

@@ -40,8 +40,9 @@ class CP_Locations {
 		add_filter( 'body_class', [ $this, 'live_body_class' ] );
 		add_action( 'cploc_location_meta_details', [ $this, 'location_meta' ], 10, 2 );
 		add_action( 'cp_live_check', [ $this, 'check' ] );
+		add_action( 'admin_init', [ $this, 'maybe_force_pull' ] );
 	}
-
+	
 	/**
 	 * Legacy function to return the embed from the location regardless of the live status
 	 * 
@@ -225,7 +226,7 @@ class CP_Locations {
 		
 		$cmb->add_field( array(
 			'name' => __( 'Force Pull', 'cp-live' ),
-			'desc' => __( 'Check this box and save to force a check for a live feed right now.', 'cp-live' ),
+			'desc' => __( 'Check this box and save to force a check for a live feed right now. This will also reset the status to Not Live if no live feeds are found.', 'cp-live' ),
 			'id'   => 'feed_check',
 			'type' => 'checkbox',
 		) );
@@ -294,4 +295,42 @@ class CP_Locations {
 			]
 		) );
 	}
+	
+	/**
+	 * Force check of all active services for this location. This also updates the live status to the service status.
+	 * 
+	 * @since  1.0.0
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function maybe_force_pull() {
+		global $pagenow;
+		
+		if ( ( $pagenow != 'post.php' ) || empty( $_GET['post'] ) ) {
+			return;
+		}
+		
+		$location_id = absint( $_GET['post'] );
+		
+		if ( get_post_type( $location_id ) != 'cploc_location' || ! get_post_meta( $location_id, 'feed_check', true ) ) {
+			return;
+		}
+
+		update_post_meta( $location_id, 'feed_check', 0 );
+		
+		add_action( 'admin_notices', function () {
+			printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', __( 'Force pull has been triggered.', 'cp-live' ) );
+		} );
+
+		foreach ( cp_live()->services->active as $service ) {
+			/** @var $service Service */
+			$service->set_context( $location_id );
+
+			$service->update( 'is_live', 0 );
+			$service->check();
+				
+			$service->set_context();
+		}
+	}
+		
 }

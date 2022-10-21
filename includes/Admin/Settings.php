@@ -503,7 +503,7 @@ class Settings {
 		
 		$advanced_options->add_field( array(
 			'name' => __( 'Force Pull', 'cp-live' ),
-			'desc' => __( 'Check this box and save to force a check for a live feed right now.', 'cp-live' ),
+			'desc' => __( 'Check this box and save to force a check for a live feed right now. This will also reset the status to Not Live if no live feeds are found.', 'cp-live' ),
 			'id'   => 'feed_check',
 			'type' => 'checkbox',
 		) );	
