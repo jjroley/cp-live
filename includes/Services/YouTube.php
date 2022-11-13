@@ -2,6 +2,8 @@
 
 namespace CP_Live\Services;
 
+use ChurchPlugins\Models\Log;
+
 class YouTube extends Service{
 
 	public $id = 'youtube';
@@ -40,6 +42,12 @@ class YouTube extends Service{
 		$search   = add_query_arg( $args, $url );
 		$response = wp_remote_get( $search );
 
+		Log::insert( [
+			'object_type' => 'service-youtube',
+			'action'      => 'check',
+			'data'        => serialize( $response ),
+		] );
+	
 		// if we don't have a valid body, bail early
 		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
 			return;
