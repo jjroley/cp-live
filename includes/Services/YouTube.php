@@ -24,6 +24,7 @@ class YouTube extends Service{
 
 		$channel_id = $this->get( 'channel_id' );
 		$api_key    = $this->get( 'api_key' );
+		$type       = $this->get( 'video_type', 'live' );
 		
 		if ( empty( $channel_id ) || empty( $api_key ) ) {
 			return;
@@ -32,7 +33,7 @@ class YouTube extends Service{
 		$args = [
 			'part'      => 'snippet',
 			'type'      => 'video',
-			'eventType' => 'live',
+			'eventType' => $type,
 			'channelId' => $channel_id,
 			'key'       => $api_key,
 		];
@@ -112,6 +113,25 @@ class YouTube extends Service{
 			'description' => __( 'Used to connect to the YouTube API.', 'cp-live' ),
 		] );
 
+		$cmb->add_field( [
+			'name'        => __( 'YouTube API Key', 'cp-live' ),
+			'id'          => $prefix . 'api_key',
+			'type'        => 'text',
+			'description' => __( 'Used to connect to the YouTube API.', 'cp-live' ),
+		] );
+
+		$cmb->add_field( [
+			'name'        => __( 'Video Type', 'cp-live' ),
+			'id'          => $prefix . 'video_type',
+			'type'        => 'radio_inline',
+			'description' => __( 'Whether to pull a currently active broadcast (Live) or the next scheduled broadcast (Upcoming).', 'cp-live' ),
+			'default'     => 'live',
+			'options'     => [
+				'live'     => __( 'Live', 'cp-live' ),
+				'upcoming' => __( 'Upcoming', 'cp-live' ),
+			],
+		] );
+		
 		$cmb->add_field( [
 			'name'        => __( 'Video URL', 'cp-live' ),
 			'id'          => $prefix . 'video_url',

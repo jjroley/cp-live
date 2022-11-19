@@ -169,7 +169,9 @@ abstract class Service {
 		if ( 'global' == $this->context ) {
 			$value = Settings::get_service( $key, $this->id, $default );
 		} else {
-			$value = get_post_meta( $this->context, $this->id . '_' . $key, true );
+			if ( ! $value = get_post_meta( $this->context, $this->id . '_' . $key, true ) ) {
+				$value = $default;
+			}
 		}
 		
 		return apply_filters( 'cp_live_service_get', $value, $key, $this->context, $this );
