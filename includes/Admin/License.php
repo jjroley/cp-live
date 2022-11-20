@@ -63,12 +63,12 @@ class License {
 		$api_params = array(
 			'edd_action' => 'activate_license',
 			'license'    => $license,
-			'item_name'  => urlencode( cp_live_ITEM_NAME ), // the name of our product in EDD
+			'item_name'  => urlencode( CP_LIVE_ITEM_NAME ), // the name of our product in EDD
 			'url'        => home_url()
 		);
 
 		// Call the custom API.
-		$response = wp_remote_post( cp_live_STORE_URL, array(
+		$response = wp_remote_post( CP_LIVE_STORE_URL, array(
 			'timeout'   => 15,
 			'sslverify' => false,
 			'body'      => $api_params
@@ -112,7 +112,7 @@ class License {
 		$api_params = array(
 			'edd_action' => 'deactivate_license',
 			'license'    => $license,
-			'item_name'  => urlencode( cp_live_ITEM_NAME ), // the name of our product in EDD
+			'item_name'  => urlencode( CP_LIVE_ITEM_NAME ), // the name of our product in EDD
 			'url'        => home_url()
 		);
 
@@ -160,11 +160,11 @@ class License {
 			$api_params = array(
 				'edd_action' => 'check_license',
 				'license'    => trim( $license ),
-				'item_name'  => urlencode( cp_live_ITEM_NAME ),
+				'item_name'  => urlencode( CP_LIVE_ITEM_NAME ),
 				'url'        => home_url()
 			);
 
-			$response = wp_remote_post( cp_live_STORE_URL, array( 'timeout' => 35, 'sslverify' => false, 'body' => $api_params ) );
+			$response = wp_remote_post( CP_LIVE_STORE_URL, array( 'timeout' => 35, 'sslverify' => false, 'body' => $api_params ) );
 
 			if ( is_wp_error( $response ) ) {
 				return;
@@ -193,17 +193,17 @@ class License {
 	public function plugin_updater() {
 		// load our custom updater
 		if ( ! class_exists( 'EDD_SL_Plugin_Updater' ) ) {
-			include( cp_live_PLUGIN_DIR . '/includes/updater.php' );
+			include( CP_LIVE_PLUGIN_DIR . '/includes/updater.php' );
 		}
 
 		// retrieve our license key from the DB
 		$license_key = trim( get_option( 'cp_live_license_key' ) );
 
 		// setup the updater
-		new \EDD_SL_Plugin_Updater( cp_live_STORE_URL, cp_live_PLUGIN_FILE, array(
-				'version'   => cp_live_PLUGIN_VERSION,    // current version number
+		new \EDD_SL_Plugin_Updater( CP_LIVE_STORE_URL, CP_LIVE_PLUGIN_FILE, array(
+				'version'   => CP_LIVE_PLUGIN_VERSION,    // current version number
 				'license'   => $license_key,     // license key (used get_option above to retrieve from DB)
-				'item_name' => urlencode( cp_live_ITEM_NAME ), // the name of our product in EDD
+				'item_name' => urlencode( CP_LIVE_ITEM_NAME ), // the name of our product in EDD
 				'author'    => 'Tanner Moushey'  // author of this plugin
 			)
 		);
