@@ -214,9 +214,14 @@ class Settings {
 		}
 
 		$this->advanced_options();
-
+		$this->license_fields();
+	}
+	
+	protected function license_fields() {
+		$license = new \ChurchPlugins\Setup\Admin\License( 'cp_live_license', 424, CP_LIVE_STORE_URL, CP_LIVE_PLUGIN_FILE, get_admin_url( null, 'admin.php?page=cp_live_license' ) );
+		
 		/**
-		 * Registers tertiary options page, and set main item as parent.
+		 * Registers settings page, and set main item as parent.
 		 */
 		$args = array(
 			'id'           => 'cp_live_license_options_page',
@@ -229,13 +234,8 @@ class Settings {
 			'display_cb'   => [ $this, 'options_display_with_tabs' ]
 		);
 
-		$tertiary_options = new_cmb2_box( $args );
-
-		$tertiary_options->add_field( array(
-			'name' => 'License Key',
-			'id'   => 'license',
-			'type' => 'text',
-		) );
+		$options = new_cmb2_box( $args );
+		$license->license_field( $options );
 	}
 	
 	public static function schedule_fields( $cmb2 ) {
@@ -508,7 +508,7 @@ class Settings {
 			'type' => 'checkbox',
 		) );	
 	}
-
+	
 	/**
 	 * A CMB2 options-page display callback override which adds tab navigation among
 	 * CMB2 options pages which share this same display callback.
