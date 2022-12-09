@@ -19,5 +19,8 @@ npm run build
 
 ### Change Log
 
+#### 1.0.1
+* Update Church Plugins core
+
 #### 1.0.0
 * Initial release

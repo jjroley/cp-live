@@ -1,14 +1,20 @@
 <?php
 /**
- * Plugin Name: Church Plugins - Live
+ * Plugin Name: CP Live
  * Plugin URL: https://churchplugins.com
  * Description: Automatically detect and show live video feeds.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Church Plugins
  * Author URI: https://churchplugins.com
  * Text Domain: cp-live
  * Domain Path: languages
  */
+
+if( !defined( 'CP_LIVE_PLUGIN_VERSION' ) ) {
+	 define ( 'CP_LIVE_PLUGIN_VERSION',
+	 	'1.0.1'
+	);
+}
 
 require_once( dirname( __FILE__ ) . "/includes/Constants.php" );
 

@@ -21,11 +21,6 @@ if( !defined( 'CP_LIVE_PLUGIN_URL' ) ) {
 	 	plugin_dir_url( CP_LIVE_PLUGIN_FILE )
 	);
 }
-if( !defined( 'CP_LIVE_PLUGIN_VERSION' ) ) {
-	 define ( 'CP_LIVE_PLUGIN_VERSION',
-	 	'1.0.0'
-	);
-}
 if( !defined( 'CP_LIVE_INCLUDES' ) ) {
 	 define ( 'CP_LIVE_INCLUDES',
 	 	plugin_dir_path( dirname( __FILE__ ) ) . 'includes'
