@@ -56,7 +56,6 @@ abstract class Service {
 	 * @return void
 	 */
 	public function add_actions() {
-		add_action( 'cp_live_check', [ $this, 'check' ] );
 		add_action( 'cp_live_settings', [ $this, 'settings' ] );
 	}
 
