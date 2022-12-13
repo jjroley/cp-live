@@ -19,6 +19,9 @@ npm run build
 
 ### Change Log
 
+#### 1.0.2
+* Fix bug that was causing a service check every cron, even when there wasn't a schedule set.
+
 #### 1.0.1
 * Update Church Plugins core
 
