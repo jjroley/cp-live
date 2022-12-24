@@ -22,6 +22,11 @@ class YouTube extends Service{
 	 */
 	public function check() {
 
+		// if we are live and already have a video url, break early
+		if ( $this->is_live() && $this->get('video_url') ) {
+			return;
+		}
+		
 		$channel_id = $this->get( 'channel_id' );
 		$api_key    = $this->get( 'api_key' );
 		$type       = $this->get( 'video_type', 'live' );

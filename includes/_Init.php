@@ -176,7 +176,7 @@ class _Init {
 	 * 
 	 * @param $schedules
 	 *
-	 * @return bool
+	 * @return bool | array 
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -190,9 +190,10 @@ class _Init {
 		$timestamp = current_time( 'timestamp' );
 		$buffer    = Settings::get_advanced( 'buffer_before', 8 ) * MINUTE_IN_SECONDS; // start watching 15 minutes before the start time
 		$duration  = Settings::get_advanced( 'buffer_after', 12 ) * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min. 
-
+		$current   = false;
+		
 		if ( empty( $schedules ) ) {
-			return false;
+			$schedules = [];
 		}
 
 		foreach ( $schedules as $schedule ) {
@@ -210,12 +211,13 @@ class _Init {
 
 				// if we fall in the window, continue with the check
 				if ( $timestamp > $start && $timestamp < $end ) {
-					return true;
+					$current = $schedule;
+					break;
 				}
 			}
 		}
 
-		return false;		
+		return apply_filters( 'cp_live_schedule_is_now', $current, $schedules );
 	}
 
 	/**
@@ -255,7 +257,7 @@ class _Init {
 			return false;
 		}
 		
-		return array_shift( $times ); // - (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+		return array_shift( $times );
 	}
 	
 	public function load_services() {

@@ -81,7 +81,7 @@ class _Init {
 	public function check() {
 
 		$check_for_live = cp_live()->schedule_is_now();
-
+		
 		foreach ( $this->active as $service ) {
 			/** @var $service Service */
 
@@ -90,7 +90,13 @@ class _Init {
 
 			if ( $check_for_live ) {
 				$service->check();
+
+				// if the current schedule is set to force the live status, do so now
+				if ( ! empty( $check_for_live['force'] ) ) {
+					$service->set_live();
+				}
 			}
+
 		}
 
 	}

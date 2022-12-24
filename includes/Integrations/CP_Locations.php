@@ -168,8 +168,13 @@ class CP_Locations {
 				
 				if ( $check_for_live ) {
 					$service->check();
+
+					// if the current schedule is set to force the live status, do so now
+					if ( ! empty( $check_for_live['force'] ) ) {
+						$service->set_live();
+					}
 				}
-				
+
 				$service->set_context();
 			}
 			

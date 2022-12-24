@@ -254,7 +254,14 @@ class Settings {
 		) );
 
 		$cmb2->add_group_field( $group_field_id, array(
-			'name'    => 'Day',
+			'name'        => __( 'Force Live', 'cp-live' ),
+			'desc'        => __( 'Force the status to go live at the designated time even if no live stream is detected.', 'cp-live' ),
+			'id'          => 'force',
+			'type'        => 'checkbox',
+		) );
+
+		$cmb2->add_group_field( $group_field_id, array(
+			'name'    => __( 'Day', 'cp-live' ),
 			'id'      => 'day',
 			'type'    => 'select',
 			'options' => [
@@ -269,7 +276,7 @@ class Settings {
 		) );
 
 		$cmb2->add_group_field( $group_field_id, array(
-			'name'        => 'Time',
+			'name'        => __( 'Time', 'cp-live' ),
 			'id'          => 'time',
 			'type'        => 'text_time',
 			'repeatable'  => true,
@@ -280,7 +287,7 @@ class Settings {
 			),
 			'time_format' => 'h:i a',
 		) );
-
+		
 	} 
 
 	protected function item_options() {

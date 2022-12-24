@@ -87,6 +87,10 @@ abstract class Service {
 	 * @author Tanner Moushey
 	 */
 	public function set_live() {
+		if ( $this->is_live() ) {
+			return;
+		}
+		
 		$this->update( 'is_live', 1 );
 		$this->update( 'live_start', time() );
 		

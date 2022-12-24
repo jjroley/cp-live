@@ -19,6 +19,10 @@ npm run build
 
 ### Change Log
 
+#### 1.0.3
+* Add control to force a schedule to go live even if no broadcast is detected.
+* Prevent extra API calls on YouTube when broadcast is already live.
+
 #### 1.0.2
 * Fix bug that was causing a service check every cron, even when there wasn't a schedule set.
 
