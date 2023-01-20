@@ -6,9 +6,7 @@ use CP_Live\Admin\Settings;
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * Setup for custom post types
- *
- * @author costmo
+ * @author Tanner Moushey
  */
 abstract class Service {
 
@@ -51,7 +49,7 @@ abstract class Service {
 	}
 
 	/**
-	 * Default action-adder for this CPT-descendants of this class
+	 * Default action-adder
 	 *
 	 * @return void
 	 */
@@ -86,8 +84,8 @@ abstract class Service {
 	 *
 	 * @author Tanner Moushey
 	 */
-	public function set_live() {
-		if ( $this->is_live() ) {
+	public function set_live( $force = false ) {
+		if ( ! $force && $this->is_live() ) {
 			return;
 		}
 		
@@ -102,7 +100,7 @@ abstract class Service {
 	/**
 	 * The settings for this Service
 	 * 
-	 * @param $cmb | The CMB2 object to attach the fields to
+	 * @param $cmb \CMB2 The CMB2 object to attach the fields to
 	 *
 	 * @return void
 	 * @since  1.0.0
@@ -120,16 +118,54 @@ abstract class Service {
 			'type'    => 'radio_inline',
 			'options' => [ 1 => __( 'Live', 'cp-live' ), 0 => __( 'Not Live', 'cp-live' ) ],
 			'default' => 0,
-			'attributes' => [
-				'disabled' => true,				
-			],
-		] );		
+		] );
 
 		$cmb->add_field( [
 			'name'    => __( 'Live Start', 'cp-live' ),
 			'id'      => $prefix . 'live_start',
 			'type'    => 'hidden',
 		] );
+
+		// for options pages, make sure we only trigger if we are on the current page
+		if ( $cmb->is_options_page_mb() && ! $cmb->doing_options_page() ) {
+			return;
+		}
+		
+		add_action( "cmb2_save_field_{$prefix}is_live", [ $this, 'live_override' ], 10, 3 );
+	}
+
+	/**
+	 * If the user manually marked the feed as live, trigger the associated actions.
+	 * 
+	 * @param $updated
+	 * @param $action
+	 * @param $field
+	 *
+	 * @since  1.0.4
+	 *
+	 * @author Tanner Moushey
+	 */
+	public function live_override( $updated, $action, $field ) {
+		if ( ! $updated ) {
+			return;
+		}
+		
+		if ( isset( $_POST['post_ID'] ) ) {
+			$this->set_context( absint( $_POST['post_ID'] ) );
+		}
+		
+		// if the new status is live, trigger corresponding actions
+		if ( ! empty( $field->value ) ) {
+			
+			// add the live_start to the data_to_save so that it saves correctly
+			$live_key = 'global' != $this->context ? $this->id . '_live_start' : 'live_start';			
+			$field->get_cmb()->data_to_save[ $live_key ] = time();
+			
+			$this->set_live( true );
+		}
+
+		// restore to global context
+		$this->set_context();
 	}
 
 	/**

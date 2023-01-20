@@ -205,6 +205,9 @@ class CP_Locations {
 			return;
 		}
 		
+		// don't assume post id
+		$context = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 'location';
+		
 		foreach( cp_live()->services->get_active_services() as $service => $details ) {
 			$cmb = new_cmb2_box( [
 				'id'           => "location_live_{$service}_meta",
@@ -215,7 +218,7 @@ class CP_Locations {
 				'show_names'   => true,
 			] );
 			
-			cp_live()->services->active[ $service ]->set_context( 'location' );
+			cp_live()->services->active[ $service ]->set_context( $context );
 			cp_live()->services->active[ $service ]->settings( $cmb, true );
 			cp_live()->services->active[ $service ]->set_context();
 		}
