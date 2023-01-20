@@ -3,6 +3,7 @@
 namespace CP_Live\Services;
 
 use ChurchPlugins\Models\Log;
+use CP_Live\Admin\Settings;
 
 class YouTube extends Service{
 
@@ -66,11 +67,92 @@ class YouTube extends Service{
 			return;
 		}
 		
-		$url = sprintf( 'https://youtube.com/watch?v=%s', urlencode( $body->items[0]->id->videoId ) );
+		// default to first video in feed
+		$video = $body->items[0]->id->videoId;
+		
+		
+		// if we have multiple broadcasts detected, try to find the one that is schedule to start when we expect it to
+		if ( count( $body->items ) > 1 ) {
+			$ids = [];
+			
+			foreach( $body->items as $item ) {
+				$ids[] = $item->id->videoId;
+			}
+
+			$videos = $this->get_video_details( $ids );
+			
+			if ( ! empty( $videos->items ) ) {
+				$timestamp = 999999999999999999999;
+				
+				// loop through the broadcasts and use the one that is happening next
+				foreach( $videos->items as $v ) {
+					if ( empty( $v->liveStreamingDetails ) || empty( $v->liveStreamingDetails->scheduledStartTime ) ) {
+						continue;
+					}
+					
+					if ( ! $start_time = strtotime( $v->liveStreamingDetails->scheduledStartTime ) ) {
+						continue;
+					}
+					
+					// if the scheduled time is more than the current time + buffer x2, move on
+					if ( $start_time > $timestamp ) {
+						continue;
+					}
+
+					$video = $v->id;
+					$timestamp = $start_time;
+				}
+			}
+
+		}
+		
+		$url = sprintf( 'https://youtube.com/watch?v=%s', urlencode( $video ) );
 		
 		$this->update( 'video_url', $url );
 		
 		$this->set_live();
+	}
+
+	/**
+	 * Get streaming details for the provided broadcast ids
+	 * 
+	 * @param $ids
+	 *
+	 * @return false|mixed
+	 * @throws \ChurchPlugins\Exception
+	 * @since  1.0.4
+	 *
+	 * @author Tanner Moushey
+	 */
+	protected function get_video_details( $ids ) {
+		if ( empty( $ids ) ) {
+			return false;
+		}
+		
+		$args = [
+			'part' => 'liveStreamingDetails',
+			'type' => 'video',
+			'id'   => implode( ',', $ids ),
+			'key'  => $this->get( 'api_key' ),
+		];
+
+		$url = 'https://www.googleapis.com/youtube/v3/videos';
+
+		$search   = add_query_arg( $args, $url );
+		$response = wp_remote_get( $search );
+
+		Log::insert( [
+			'object_type' => 'service-youtube',
+			'action'      => 'video-details',
+			'data'        => serialize( $response ),
+		] );
+
+		// if we don't have a valid body, bail early
+		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
+			return false;
+		}
+
+		return json_decode( $body );
 	}
 
 	/**
