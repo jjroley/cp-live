@@ -19,6 +19,10 @@ npm run build
 
 ### Change Log
 
+#### 1.0.4
+* Allow for manually setting the site to live
+* If multiple YouTube broadcasts are detected. Use the one that starts next.
+
 #### 1.0.3
 * Add control to force a schedule to go live even if no broadcast is detected.
 * Prevent extra API calls on YouTube when broadcast is already live.
