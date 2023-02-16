@@ -102,19 +102,19 @@ class _Init {
 	 */
 	protected function includes() {
 		require_once( 'Templates.php' );
-		
+
 		Admin\_Init::get_instance();
 		Setup\ShortCodes::get_instance();
-		
+
 		$this->setup = Setup\_Init::get_instance();
 		$this->services = Services\_Init::get_instance();
 		$this->integrations = Integrations\_Init::get_instance();
 	}
-	
+
 	protected function actions() {
 		add_action( 'plugins_loaded', [ $this, 'load_services' ] );
 	}
-	
+
 	/**
 	 * Required Plugins notice
 	 *
@@ -128,7 +128,7 @@ class _Init {
 
 	/**
 	 * Determine if any active services are live. Return the id of the first live service found
-	 * 
+	 *
 	 * @return mixed|void
 	 * @since  1.0.0
 	 *
@@ -136,21 +136,21 @@ class _Init {
 	 */
 	public function is_live() {
 		$is_live = false;
-		
+
 		foreach( $this->services->active as $id => $service ) {
 			/** @var $service Services\Service */
 			if ( $service->is_live() ) {
 				$is_live = $id;
-				break;	
+				break;
 			}
 		}
-		
+
 		return apply_filters( 'cp_live_is_live', $is_live );
 	}
 
 	/**
 	 * Return the live embed for the live service
-	 * 
+	 *
 	 * @return mixed|void
 	 * @since  1.0.0
 	 *
@@ -158,25 +158,25 @@ class _Init {
 	 */
 	public function get_live_embed() {
 		$embed = '';
-		
+
 		foreach( array_reverse( $this->services->active ) as $service ) {
 			/** @var $service Services\Service */
 			$embed = $service->get_embed();
 
 			if ( $service->is_live() ) {
-				break;	
+				break;
 			}
 		}
-		
-		return apply_filters( 'cp_live_get_live_embed', $embed );		
+
+		return apply_filters( 'cp_live_get_live_embed', $embed );
 	}
 
 	/**
 	 * Check if we are in the window of a schedule to check for a live stream
-	 * 
+	 *
 	 * @param $schedules
 	 *
-	 * @return bool | array 
+	 * @return bool | array
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
@@ -185,13 +185,13 @@ class _Init {
 		if ( false === $schedules ) {
 			$schedules = Settings::get( 'schedule_group' );
 		}
-		
+
 		$day       = strtolower( date( 'l', current_time( 'timestamp' ) ) );
 		$timestamp = current_time( 'timestamp' );
 		$buffer    = Settings::get_advanced( 'buffer_before', 8 ) * MINUTE_IN_SECONDS; // start watching 15 minutes before the start time
-		$duration  = Settings::get_advanced( 'buffer_after', 12 ) * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min. 
+		$duration  = Settings::get_advanced( 'buffer_after', 12 ) * MINUTE_IN_SECONDS; // how long we'll keep checking after the service should have started. Allow for the initial 15 min.
 		$current   = false;
-		
+
 		if ( empty( $schedules ) ) {
 			$schedules = [];
 		}
@@ -200,7 +200,7 @@ class _Init {
 			if ( $day !== $schedule['day'] ) {
 				continue;
 			}
-			
+
 			if ( empty( $schedule['time'] ) ) {
 				continue;
 			}
@@ -222,7 +222,7 @@ class _Init {
 
 	/**
 	 * Return the next scheduled event
-	 * 
+	 *
 	 * @param $schedules
 	 *
 	 * @return false|mixed|null
@@ -234,9 +234,9 @@ class _Init {
 		if ( false === $schedules ) {
 			$schedules = Settings::get( 'schedule_group' );
 		}
-		
+
 		$times = [];
-		
+
 		if ( empty( $schedules ) ) {
 			return false;
 		}
@@ -247,23 +247,23 @@ class _Init {
 			}
 
 			foreach ( $schedule['time'] as $time ) {
-				$times[] = strtotime( $schedule['day'] . ' ' . $time );
+				$times[] = strtotime( $schedule['day'] . ' ' . $time, current_time( 'timestamp' ) );
 			}
 		}
-		
+
 		asort( $times );
-		
+
 		if ( empty( $times ) ) {
 			return false;
 		}
-		
+
 		return array_shift( $times );
 	}
-	
+
 	public function load_services() {
-		
+
 	}
-	
+
 	public function get_default_thumb() {
 		return CP_LIVE_PLUGIN_URL . '/app/public/logo512.png';
 	}

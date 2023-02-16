@@ -21,6 +21,7 @@ npm run build
 
 #### 1.0.5
 * Add logging for Resi check
+* Update schedule retrieval to use localized timestamp for sorting
 
 #### 1.0.4
 * Allow for manually setting the site to live
