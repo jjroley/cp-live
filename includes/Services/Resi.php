@@ -2,23 +2,26 @@
 
 namespace CP_Live\Services;
 
+use ChurchPlugins\Models\Log;
+
 class Resi extends Service{
-	
+
 	public $id = 'resi';
-	
+
 	public function add_actions() {
 		parent::add_actions();
 	}
 
 	/**
 	 * Check the sites to see if any of them are live
-	 * 
+	 *
 	 * @since  1.0.0
 	 *
 	 * @author Tanner Moushey
 	 */
 	public function check() {
 		$stream = $this->get( 'stream_url', false );
+		$xml = $status = '';
 
 		if ( ! empty( $stream ) ) {
 			$xml = simplexml_load_file( $stream );
@@ -33,8 +36,14 @@ class Resi extends Service{
 			$status = 'stream_missing';
 		}
 
+		Log::insert( [
+			'object_type' => 'service-resi',
+			'action'      => 'check',
+			'data'        => serialize( [ 'status' => $status, 'xml' => $xml ] ),
+		] );
+
 		$this->update( 'status', $status );
-		
+
 		if ( 'dynamic' === $status ) {
 			$this->set_live();
 		}
@@ -42,7 +51,7 @@ class Resi extends Service{
 
 	/**
 	 * Return the embed for Resi
-	 * 
+	 *
 	 * @return string
 	 * @since  1.0.0
 	 *
@@ -52,7 +61,7 @@ class Resi extends Service{
 		if ( ! $embed_id = $this->get( 'embed_id' ) ) {
 			return '';
 		}
-		
+
 		ob_start(); ?>
         <div id="resi-video-player" data-embed-id="<?php echo $embed_id ?>"></div>
         <script type="application/javascript" src="https://control.resi.io/webplayer/loader.min.js"></script>
@@ -62,7 +71,7 @@ class Resi extends Service{
 
 	/**
 	 * Resi Settings
-	 * 
+	 *
 	 * @param $cmb
 	 *
 	 * @since  1.0.0
@@ -70,7 +79,7 @@ class Resi extends Service{
 	 * @author Tanner Moushey
 	 */
 	public function settings( $cmb ) {
-		
+
 		// add prefix to fields if we are not in the global context. Other services may use the same id.
 		$prefix = 'global' != $this->context ? $this->id . '_' : '';
 
@@ -96,11 +105,11 @@ class Resi extends Service{
 			'id'   => $prefix . 'status',
 			'type' => 'text',
 			'attributes' => [
-				'disabled' => true,				
-			],			
+				'disabled' => true,
+			],
 		] );
 
 		parent::settings( $cmb );
 	}
-	
+
 }
