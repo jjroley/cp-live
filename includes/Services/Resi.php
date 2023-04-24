@@ -22,12 +22,14 @@ class Resi extends Service{
 	public function check() {
 		$stream = $this->get( 'stream_url', false );
 
+		$xml = '';
+
 		if ( ! empty( $stream ) ) {
 			$xml = simplexml_load_file( $stream );
 
 			if ( ! empty( $xml ) ) {
 				$status = (string) strtolower( $xml->attributes()->{'type'} );
-
+				$xml = $xml->asXML();
 			} else {
 				$status = 'stream_empty';
 			}
@@ -38,7 +40,7 @@ class Resi extends Service{
 		Log::insert( [
 			'object_type' => 'service-resi',
 			'action'      => 'check',
-			'data'        => serialize( [ 'status' => $status, 'stream' => $stream ] ),
+			'data'        => serialize( [ 'status' => $status, 'xml' => $xml ] ),
 		] );
 
 		$this->update( 'status', $status );
