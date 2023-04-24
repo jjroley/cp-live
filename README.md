@@ -19,6 +19,9 @@ npm run build
 
 ### Change Log
 
+#### 1.0.6
+* Update CP Core
+
 #### 1.0.5
 * Add logging for Resi check
 * Update schedule retrieval to use localized timestamp for sorting

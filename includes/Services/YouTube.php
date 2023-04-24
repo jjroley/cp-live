@@ -8,14 +8,14 @@ use CP_Live\Admin\Settings;
 class YouTube extends Service{
 
 	public $id = 'youtube';
-	
+
 	public function add_actions() {
 		parent::add_actions();
 	}
-	
+
 	/**
 	 * Check the status of a channel, update the meta if live
-	 * 
+	 *
 	 * @return void
 	 * @since  1.0.1
 	 *
@@ -27,15 +27,15 @@ class YouTube extends Service{
 		if ( $this->is_live() && $this->get('video_url') ) {
 			return;
 		}
-		
+
 		$channel_id = $this->get( 'channel_id' );
 		$api_key    = $this->get( 'api_key' );
 		$type       = $this->get( 'video_type', 'live' );
-		
+
 		if ( empty( $channel_id ) || empty( $api_key ) ) {
 			return;
 		}
-		
+
 		$args = [
 			'part'      => 'snippet',
 			'type'      => 'video',
@@ -54,7 +54,7 @@ class YouTube extends Service{
 			'action'      => 'check',
 			'data'        => serialize( $response ),
 		] );
-	
+
 		// if we don't have a valid body, bail early
 		if ( ! $body = wp_remote_retrieve_body( $response ) ) {
 			return;
@@ -66,34 +66,34 @@ class YouTube extends Service{
 		if ( empty( $body->items ) ) {
 			return;
 		}
-		
+
 		// default to first video in feed
 		$video = $body->items[0]->id->videoId;
-		
-		
+
+
 		// if we have multiple broadcasts detected, try to find the one that is schedule to start when we expect it to
 		if ( count( $body->items ) > 1 ) {
 			$ids = [];
-			
+
 			foreach( $body->items as $item ) {
 				$ids[] = $item->id->videoId;
 			}
 
 			$videos = $this->get_video_details( $ids );
-			
+
 			if ( ! empty( $videos->items ) ) {
 				$timestamp = 999999999999999999999;
-				
+
 				// loop through the broadcasts and use the one that is happening next
 				foreach( $videos->items as $v ) {
 					if ( empty( $v->liveStreamingDetails ) || empty( $v->liveStreamingDetails->scheduledStartTime ) ) {
 						continue;
 					}
-					
+
 					if ( ! $start_time = strtotime( $v->liveStreamingDetails->scheduledStartTime ) ) {
 						continue;
 					}
-					
+
 					// if the scheduled time is more than the current time + buffer x2, move on
 					if ( $start_time > $timestamp ) {
 						continue;
@@ -105,17 +105,17 @@ class YouTube extends Service{
 			}
 
 		}
-		
+
 		$url = sprintf( 'https://youtube.com/watch?v=%s', urlencode( $video ) );
-		
+
 		$this->update( 'video_url', $url );
-		
+
 		$this->set_live();
 	}
 
 	/**
 	 * Get streaming details for the provided broadcast ids
-	 * 
+	 *
 	 * @param $ids
 	 *
 	 * @return false|mixed
@@ -128,7 +128,7 @@ class YouTube extends Service{
 		if ( empty( $ids ) ) {
 			return false;
 		}
-		
+
 		$args = [
 			'part' => 'liveStreamingDetails',
 			'type' => 'video',
@@ -157,7 +157,7 @@ class YouTube extends Service{
 
 	/**
 	 * Return the embed for YouTube
-	 * 
+	 *
 	 * @return string
 	 * @since  1.0.0
 	 *
@@ -169,13 +169,13 @@ class YouTube extends Service{
 		if ( ! $video_url = $this->get( 'video_url' ) ) {
 			return '';
 		}
-		
+
 		return $wp_embed->autoembed( $video_url );
 	}
 
 	/**
 	 * YouTube Settings
-	 * 
+	 *
 	 * @param $cmb
 	 *
 	 * @since  1.0.0
@@ -191,7 +191,7 @@ class YouTube extends Service{
 			'id'          => $prefix . 'channel_id',
 			'type'        => 'text',
 			'description' => __( 'The ID of the channel to check.', 'cp-live' ),
-		] );		
+		] );
 
 		$cmb->add_field( [
 			'name'        => __( 'YouTube API Key', 'cp-live' ),
@@ -218,15 +218,15 @@ class YouTube extends Service{
 				'upcoming' => __( 'Upcoming', 'cp-live' ),
 			],
 		] );
-		
+
 		$cmb->add_field( [
 			'name'        => __( 'Video URL', 'cp-live' ),
 			'id'          => $prefix . 'video_url',
 			'type'        => 'text_url',
 			'description' => __( 'The URL of the most recent or currently live video.', 'cp-live' ),
 		] );
-		
+
 		parent::settings( $cmb );
 	}
-	
+
 }
