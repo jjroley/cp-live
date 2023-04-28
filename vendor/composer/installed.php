@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => 'd18dcc4299d10c71dbf2f2aaff41ac95a8deb2e3',
+    'reference' => 'bd93b26eee4e2ce35ca772aae5303c34ec47a560',
     'name' => 'churchplugins/cp-live',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => 'd18dcc4299d10c71dbf2f2aaff41ac95a8deb2e3',
+      'reference' => 'bd93b26eee4e2ce35ca772aae5303c34ec47a560',
     ),
     'composer/installers' => 
     array (
@@ -31,12 +31,12 @@
     ),
     'wpackio/enqueue' => 
     array (
-      'pretty_version' => '3.4.0',
-      'version' => '3.4.0.0',
+      'pretty_version' => '3.5.0',
+      'version' => '3.5.0.0',
       'aliases' => 
       array (
       ),
-      'reference' => '8a5604f5ab3bd5f000e503dda02603e15e534d47',
+      'reference' => '944dd17df10e2e534e62ca3f5f20e550c2058a63',
     ),
   ),
 );

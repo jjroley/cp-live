@@ -18,8 +18,7 @@
   },
   "autoload": {
     "psr-4": {
-      "CP_Live\\": "includes/",
-      "ChurchPlugins\\": "includes/ChurchPlugins/"
+      "CP_Live\\": "includes/"
     }
   },
   "config": {
