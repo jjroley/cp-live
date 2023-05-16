@@ -172,12 +172,11 @@ class YouTube extends Service{
 
     $output = $wp_embed->autoembed( $video_url );
 
-    $show_subscribe_button = $this->get( 'show_subscribe_button' );
-    if( $show_subscribe_button == 'show' ) {
+    if( $this->get( 'show_subscribe_button' ) == 'show' ) {
       $channel_id = $this->get( 'channel_id' );
 
-      if( $channel_id && !wp_script_is( 'google_ytsubscribe', 'enqueued' ) ) {
-        wp_enqueue_script( 'google_ytsubscribe', 'https://apis.google.com/js/platform.js' );
+      if( $channel_id && ! wp_script_is( 'google_platform_js', 'enqueued' ) ) {
+        wp_enqueue_script( 'google_platform_js', 'https://apis.google.com/js/platform.js' );
       }
   
       $output .= "<div class='cp-subscribe-btn'><div class='g-ytsubscribe' data-channelid='$channel_id' data-layout='default' data-count='default'></div><div>";
@@ -245,7 +244,7 @@ class YouTube extends Service{
 			'description' => __( 'Display a button for viewers to subscribe to your channel', 'cp-live' ),
 			'default'     => 'show',
 			'options'     => [
-				'show'     => __( 'Show', 'cp-live' ),
+				'show' => __( 'Show', 'cp-live' ),
 				'hide' => __( 'Hide', 'cp-live' ),
 			],
 		] );
