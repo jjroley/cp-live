@@ -21,7 +21,6 @@ require_once( dirname( __FILE__ ) . "/includes/Constants.php" );
 require_once( CP_LIVE_PLUGIN_DIR . "/includes/ChurchPlugins/init.php" );
 require_once( CP_LIVE_PLUGIN_DIR . 'vendor/autoload.php' );
 
-
 use CP_Live\_Init as Init;
 
 /**
