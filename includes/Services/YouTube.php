@@ -170,9 +170,21 @@ class YouTube extends Service{
 			return '';
 		}
 
-		return $wp_embed->autoembed( $video_url );
-	}
+    $output = $wp_embed->autoembed( $video_url );
 
+    $show_subscribe_button = $this->get( 'show_subscribe_button' );
+    if( $show_subscribe_button == 'show' ) {
+      $channel_id = $this->get( 'channel_id' );
+
+      if( $channel_id && !wp_script_is( 'google_ytsubscribe', 'enqueued' ) ) {
+        wp_enqueue_script( 'google_ytsubscribe', 'https://apis.google.com/js/platform.js' );
+      }
+  
+      $output .= "<div class='cp-subscribe-btn'><div class='g-ytsubscribe' data-channelid='$channel_id' data-layout='default' data-count='default'></div><div>";
+    } 
+
+		return $output;
+  }
 	/**
 	 * YouTube Settings
 	 *
@@ -224,6 +236,18 @@ class YouTube extends Service{
 			'id'          => $prefix . 'video_url',
 			'type'        => 'text_url',
 			'description' => __( 'The URL of the most recent or currently live video.', 'cp-live' ),
+		] );
+
+    $cmb->add_field( [
+			'name'        => __( 'Show Subscribe Button', 'cp-live' ),
+			'id'          => $prefix . 'show_subscribe_button',
+			'type'        => 'radio_inline',
+			'description' => __( 'Display a button for viewers to subscribe to your channel', 'cp-live' ),
+			'default'     => 'show',
+			'options'     => [
+				'show'     => __( 'Show', 'cp-live' ),
+				'hide' => __( 'Hide', 'cp-live' ),
+			],
 		] );
 
 		parent::settings( $cmb );
